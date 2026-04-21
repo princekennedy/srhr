@@ -1,0 +1,210 @@
+@import 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *));
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+html {
+    color-scheme: light;
+}
+
+html.dark {
+    color-scheme: dark;
+}
+
+body {
+    background: transparent;
+}
+
+html:not(.dark) .site-shell {
+    background: radial-gradient(circle at top left, rgba(16, 185, 129, 0.16), transparent 28%), radial-gradient(circle at top right, rgba(251, 146, 60, 0.14), transparent 24%), linear-gradient(180deg, rgb(248, 250, 252), rgb(226, 232, 240) 52%, rgb(241, 245, 249) 100%);
+}
+
+html.dark .site-shell {
+    background: radial-gradient(circle at top left, rgba(45, 212, 191, 0.22), transparent 32%), radial-gradient(circle at top right, rgba(251, 146, 60, 0.18), transparent 28%), linear-gradient(180deg, #120f0d 0%, #0c0a09 52%, #080807 100%);
+}
+
+html:not(.dark) .bg-stone-950,
+html:not(.dark) .bg-stone-950\/90,
+html:not(.dark) .bg-stone-900\/90,
+html:not(.dark) .bg-stone-950\/40,
+html:not(.dark) .bg-stone-950\/60,
+html:not(.dark) .bg-stone-950\/80 {
+    background-color: rgba(255, 255, 255, 0.92);
+}
+
+html:not(.dark) .bg-white\/5,
+html:not(.dark) .bg-white\/10 {
+    background-color: rgba(255, 255, 255, 0.82);
+}
+
+html:not(.dark) .border-white\/10,
+html:not(.dark) .border-white\/15,
+html:not(.dark) .border-white\/20,
+html:not(.dark) .border-emerald-400\/30,
+html:not(.dark) .border-emerald-400\/50,
+html:not(.dark) .border-rose-400\/30 {
+    border-color: rgba(203, 213, 225, 0.9);
+}
+
+html:not(.dark) .text-white,
+html:not(.dark) .text-stone-100,
+html:not(.dark) .text-stone-200 {
+    color: rgb(15 23 42);
+}
+
+html:not(.dark) .text-stone-300 {
+    color: rgb(51 65 85);
+}
+
+html:not(.dark) .text-stone-400,
+html:not(.dark) .text-stone-500 {
+    color: rgb(100 116 139);
+}
+
+html:not(.dark) .text-emerald-200,
+html:not(.dark) .text-emerald-300 {
+    color: rgb(5 150 105);
+}
+
+html:not(.dark) .text-rose-200,
+html:not(.dark) .text-rose-300 {
+    color: rgb(190 24 93);
+}
+
+html:not(.dark) input,
+html:not(.dark) textarea,
+html:not(.dark) select {
+    color: rgb(15 23 42);
+}
+
+html:not(.dark) .cms-surface {
+    background: radial-gradient(circle at top, rgba(16, 185, 129, 0.14), transparent 30%), linear-gradient(180deg, rgb(248, 250, 252), rgb(241, 245, 249));
+}
+
+html.dark .cms-surface {
+    background: radial-gradient(circle at top, rgba(16, 185, 129, 0.14), transparent 30%), linear-gradient(180deg, rgba(24, 24, 27, 0.98), rgba(12, 10, 9, 1));
+}
+
+.site-nav-details>summary {
+    list-style: none;
+}
+
+.site-nav-details>summary::-webkit-details-marker {
+    display: none;
+}
+
+.site-nav-details[open]>summary .site-nav-chevron {
+    transform: rotate(180deg);
+}
+
+.site-nav-chevron {
+    transition: transform 160ms ease;
+}
+
+.site-nav-panel {
+    backdrop-filter: blur(20px);
+}
+
+.article-content>*+* {
+    margin-top: 1.25rem;
+}
+
+.article-content h2,
+.article-content h3,
+.article-content h4 {
+    color: rgb(255 255 255);
+    font-family: 'Figtree', sans-serif;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+html:not(.dark) .article-content h2,
+html:not(.dark) .article-content h3,
+html:not(.dark) .article-content h4 {
+    color: rgb(15 23 42);
+}
+
+.article-content h2 {
+    font-size: 1.875rem;
+}
+
+.article-content h3 {
+    font-size: 1.5rem;
+}
+
+.article-content p,
+.article-content li,
+.article-content blockquote {
+    color: inherit;
+}
+
+.article-content ul,
+.article-content ol {
+    margin-left: 1.5rem;
+    padding-left: 0.5rem;
+}
+
+.article-content ul {
+    list-style: disc;
+}
+
+.article-content ol {
+    list-style: decimal;
+}
+
+.article-content a {
+    color: rgb(110 231 183);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.2em;
+}
+
+.article-content blockquote {
+    border-left: 4px solid rgba(52, 211, 153, 0.5);
+    margin-left: 0;
+    padding-left: 1rem;
+    font-style: italic;
+}
+
+.ck-editor__editable_inline {
+    min-height: 22rem;
+}
+
+html:not(.dark) .ck.ck-editor__main>.ck-editor__editable,
+html:not(.dark) .ck.ck-toolbar,
+html:not(.dark) .ck.ck-toolbar__separator {
+    background: rgb(255 255 255);
+    border-color: rgba(203, 213, 225, 0.9);
+    color: rgb(15 23 42);
+}
+
+html:not(.dark) .ck.ck-button,
+html:not(.dark) .ck.ck-button .ck-button__label,
+html:not(.dark) .ck.ck-dropdown__button {
+    color: rgb(15 23 42);
+}
+
+html.dark .ck.ck-editor__main>.ck-editor__editable,
+html.dark .ck.ck-toolbar,
+html.dark .ck.ck-toolbar__separator {
+    background: rgba(28, 25, 23, 0.92);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: rgb(245 245 244);
+}
+
+html.dark .ck.ck-button,
+html.dark .ck.ck-button .ck-button__label,
+html.dark .ck.ck-dropdown__button,
+html.dark .ck.ck-input {
+    color: rgb(245 245 244);
+}
+
+html.dark .ck.ck-button:not(.ck-disabled):hover,
+html.dark .ck.ck-button.ck-on {
+    background: rgba(16, 185, 129, 0.2);
+}
