@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Cms;
 
+use App\Support\CurrentWebsite;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -23,10 +24,11 @@ class MenuRequest extends FormRequest
     public function rules(): array
     {
         $menuId = $this->route('menu')?->id;
+        $websiteId = app(CurrentWebsite::class)->id();
 
         return [
             'name' => ['required', 'string', 'max:120'],
-            'slug' => ['nullable', 'string', 'max:140', Rule::unique('menus', 'slug')->ignore($menuId)],
+            'slug' => ['nullable', 'string', 'max:140', Rule::unique('menus', 'slug')->where(fn ($query) => $query->where('website_id', $websiteId))->ignore($menuId)],
             'description' => ['nullable', 'string'],
             'location' => ['nullable', 'string', 'max:80'],
             'is_active' => ['nullable', 'boolean'],

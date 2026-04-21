@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Cms;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cms\ContentCategoryRequest;
 use App\Models\ContentCategory;
+use App\Models\MenuItem;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 
@@ -25,6 +26,7 @@ class ContentCategoryController extends Controller
     {
         return view('cms.categories.create', [
             'category' => new ContentCategory(),
+            'menuItemOptions' => $this->menuItemOptions(),
         ]);
     }
 
@@ -41,10 +43,19 @@ class ContentCategoryController extends Controller
             ->with('status', 'Category created.');
     }
 
+    public function show(ContentCategory $category): View
+    {
+        $category->load(['contents.blocks']);
+        return view('cms.categories.show', [
+            'category' => $category,
+        ]);
+    }
+
     public function edit(ContentCategory $category): View
     {
         return view('cms.categories.edit', [
             'category' => $category,
+            'menuItemOptions' => $this->menuItemOptions(),
         ]);
     }
 
@@ -68,5 +79,13 @@ class ContentCategoryController extends Controller
         return redirect()
             ->route('cms.categories.index')
             ->with('status', 'Category deleted.');
+    }
+
+    private function menuItemOptions()
+    {
+        return MenuItem::query()
+            ->where('type', 'webview_page')
+            ->orderBy('title')
+            ->get(['id', 'title']);
     }
 }

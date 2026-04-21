@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Cms;
 
 use App\Models\Content;
+use App\Support\CurrentWebsite;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,10 +17,11 @@ class ServiceCenterRequest extends FormRequest
     public function rules(): array
     {
         $serviceId = $this->route('service')?->id;
+        $websiteId = app(CurrentWebsite::class)->id();
 
         return [
             'name' => ['required', 'string', 'max:160'],
-            'slug' => ['nullable', 'string', 'max:180', Rule::unique('service_centers', 'slug')->ignore($serviceId)],
+            'slug' => ['nullable', 'string', 'max:180', Rule::unique('service_centers', 'slug')->where(fn ($query) => $query->where('website_id', $websiteId))->ignore($serviceId)],
             'category_id' => ['nullable', 'exists:content_categories,id'],
             'district' => ['nullable', 'string', 'max:120'],
             'physical_address' => ['nullable', 'string'],

@@ -16,6 +16,8 @@ class AppSettingsUpdateRequest extends FormRequest
         return [
             'settings' => ['required', 'array'],
             'settings.*' => ['nullable'],
+            'setting_uploads' => ['nullable', 'array'],
+            'setting_uploads.*' => ['nullable', 'file', 'max:5120'],
         ];
     }
 }

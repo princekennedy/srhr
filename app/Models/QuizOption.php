@@ -2,15 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToWebsite;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class QuizOption extends Model
 {
+    use BelongsToWebsite;
     use HasFactory;
 
     protected $fillable = [
+        'website_id',
         'quiz_question_id',
         'option_text',
         'feedback',

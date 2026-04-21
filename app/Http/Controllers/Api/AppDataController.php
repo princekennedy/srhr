@@ -148,6 +148,8 @@ class AppDataController extends Controller
             'body' => $content->body,
             'content_type' => $content->content_type,
             'audience' => $content->audience,
+            'featured_image_url' => $content->featuredImageUrl(),
+            'attachments' => $content->attachmentItems(),
             'published_at' => optional($content->published_at)->toIso8601String(),
             'category' => $content->category === null ? null : [
                 'id' => $content->category->id,
@@ -292,6 +294,8 @@ class AppDataController extends Controller
                     'body' => $content->body,
                     'content_type' => $content->content_type,
                     'audience' => $content->audience,
+                    'featured_image_url' => $content->featuredImageUrl(),
+                    'attachments' => $content->attachmentItems(),
                     'published_at' => optional($content->published_at)->toIso8601String(),
                     'category' => $content->category === null ? null : [
                         'id' => $content->category->id,

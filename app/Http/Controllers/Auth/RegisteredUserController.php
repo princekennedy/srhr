@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Website;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ class RegisteredUserController extends Controller
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'website_name' => ['required', 'string', 'max:255'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
@@ -32,6 +34,19 @@ class RegisteredUserController extends Controller
             'email' => $payload['email'],
             'password' => Hash::make($payload['password']),
         ]);
+
+        $website = Website::create([
+            'name' => $payload['website_name'],
+            'created_by' => $user->id,
+            'is_active' => true,
+        ]);
+
+        $user->websites()->attach($website->id, [
+            'role' => 'owner',
+            'is_owner' => true,
+        ]);
+
+        $user->switchToWebsite($website);
 
         if (Schema::hasTable('roles')) {
             $appUserRole = \Spatie\Permission\Models\Role::query()

@@ -14,102 +14,117 @@
             @vite(['resources/css/app.css', 'resources/js/app.js'])
         @endunless
     </head>
-    <body class="min-h-screen bg-slate-50 text-slate-900 transition-colors dark:bg-stone-950 dark:text-stone-100">
-        <div class="grid min-h-screen lg:grid-cols-[280px_1fr]">
-            <aside class="border-b border-slate-200 bg-white/90 px-6 py-8 backdrop-blur lg:border-b-0 lg:border-r dark:border-white/10 dark:bg-stone-900/90">
-                <div class="space-y-2">
-                    <p class="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-300">SRHR Platform</p>
-                    <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">CMS Workspace</h1>
-                    <p class="text-sm leading-6 text-slate-600 dark:text-stone-400">Manage youth-friendly content, menus, settings, and app-facing publishing workflows from a single dashboard.</p>
-                </div>
-
-                <div class="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
-                    <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-stone-400">Signed in as</p>
-                    <p class="mt-2 text-base font-semibold text-slate-900 dark:text-white">{{ auth()->user()?->name }}</p>
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        @foreach (auth()->user()?->getRoleNames() ?? [] as $role)
-                            <span class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:border-white/10 dark:text-emerald-200">{{ $role }}</span>
-                        @endforeach
-                    </div>
-                    <p class="mt-3 text-sm text-slate-600 dark:text-stone-400">
-                        {{ auth()->user()?->canManageAnyCmsModule() ? 'Management actions are enabled for this account.' : 'This account has read-only dashboard access.' }}
-                    </p>
-                </div>
-
-                <div class="mt-4 flex items-center gap-3">
-                    <button type="button" data-theme-toggle class="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-stone-200 dark:hover:bg-white/10">
-                        Toggle theme
-                    </button>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="text-sm font-medium text-slate-500 transition hover:text-slate-900 dark:text-stone-400 dark:hover:text-white">Sign out</button>
-                    </form>
-                </div>
-
-                <nav class="mt-8 space-y-2">
-                    @php
-                        $navigation = [
-                            ['label' => 'Dashboard', 'route' => 'cms.dashboard'],
-                            ['label' => 'Categories', 'route' => 'cms.categories.index'],
-                            ['label' => 'Content', 'route' => 'cms.contents.index'],
-                            ['label' => 'FAQs', 'route' => 'cms.faqs.index'],
-                            ['label' => 'Quizzes', 'route' => 'cms.quizzes.index'],
-                            ['label' => 'Services', 'route' => 'cms.services.index'],
-                            ['label' => 'Menus', 'route' => 'cms.menus.index'],
-                            ['label' => 'Settings', 'route' => 'cms.settings.index'],
-                        ];
-                    @endphp
-
-                    @foreach ($navigation as $item)
-                        <a
-                            href="{{ route($item['route']) }}"
-                            class="flex items-center justify-between rounded-2xl border px-4 py-3 text-sm transition {{ request()->routeIs($item['route']) || request()->routeIs($item['route'].'.*') ? 'border-emerald-400/40 bg-emerald-50 text-slate-900 dark:border-emerald-400/50 dark:bg-emerald-400/10 dark:text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-stone-300 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white' }}"
-                        >
-                            <span>{{ $item['label'] }}</span>
-                            <span class="text-xs uppercase tracking-[0.3em] text-slate-400 dark:text-stone-500">Open</span>
-                        </a>
-                    @endforeach
-                </nav>
-            </aside>
-
-            <main class="cms-surface px-5 py-6 sm:px-8 lg:px-10">
-                <div class="mx-auto max-w-7xl">
-                    <header class="mb-8 flex flex-col gap-4 border-b border-slate-200 pb-6 md:flex-row md:items-end md:justify-between dark:border-white/10">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-600 dark:text-emerald-300">{{ $eyebrow ?? 'Content Management System' }}</p>
-                            <h2 class="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{{ $heading ?? 'CMS' }}</h2>
-                            @if (! empty($subheading ?? null))
-                                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-stone-400">{{ $subheading }}</p>
+    <body class="cms-shell h-screen overflow-hidden transition-colors">
+        <div class="relative z-10 flex h-screen flex-col">
+            <header class="shrink-0 z-50 px-4 py-4 sm:px-6 lg:px-8">
+                <div class="cms-panel cms-gradient-card mx-auto max-w-[96rem] px-5 py-4 sm:px-6 lg:px-8">
+                    <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                        <div class="flex flex-wrap items-center gap-4">
+                            <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-cyan-500 to-orange-400 text-base font-black tracking-[0.2em] text-white shadow-lg shadow-orange-200/40 dark:shadow-none">CMS</div>
+                            <div>
+                                <p class="cms-kicker text-[0.72rem] font-semibold uppercase tracking-[0.35em]">SRHR Platform</p>
+                                <h1 class="cms-title mt-1 text-xl font-bold tracking-tight">CMS Workspace</h1>
+                            </div>
+                            @if (auth()->user()?->currentWebsite)
+                                <span class="cms-chip inline-flex items-center px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">{{ auth()->user()?->currentWebsite?->name }}</span>
                             @endif
                         </div>
 
-                        @isset($headerAction)
-                            <div>
-                                {{ $headerAction }}
+                        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                            <a href="{{ route('websites.index') }}" class="inline-flex items-center justify-center rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-sky-200 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-stone-200 dark:hover:text-white">Websites</a>
+                            <div class="cms-glass rounded-2xl px-4 py-2.5">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ auth()->user()?->name }}</p>
+                                    @foreach (auth()->user()?->getRoleNames() ?? [] as $role)
+                                        <span class="cms-chip cms-chip-accent px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em]">{{ $role }}</span>
+                                    @endforeach
+                                </div>
                             </div>
-                        @endisset
-                    </header>
-
-                    @if (session('status'))
-                        <div class="mb-6 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-100">
-                            {{ session('status') }}
+                            <button type="button" data-theme-toggle class="inline-flex items-center justify-center rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-sky-200 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-stone-200 dark:hover:text-white">
+                                Toggle theme
+                            </button>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="inline-flex items-center justify-center rounded-full border border-rose-200/80 bg-white/80 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:-translate-y-0.5 hover:border-rose-300 hover:text-rose-700 dark:border-rose-400/20 dark:bg-white/5 dark:text-rose-200 dark:hover:text-rose-100">Sign out</button>
+                            </form>
                         </div>
-                    @endif
-
-                    @if ($errors->any())
-                        <div class="mb-6 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-100">
-                            <p class="font-semibold">Please correct the highlighted fields.</p>
-                            <ul class="mt-2 space-y-1 text-rose-700/90 dark:text-rose-50/90">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-
-                    {{ $slot }}
+                    </div>
                 </div>
-            </main>
+            </header>
+
+            <div class="mx-auto grid w-full max-w-[96rem] flex-1 min-h-0 items-start gap-5 px-4 pb-6 sm:px-6 lg:grid-cols-[290px_1fr] lg:px-8 overflow-y-auto lg:overflow-hidden">
+                <aside class="cms-panel cms-gradient-card h-fit px-5 py-6 lg:h-full lg:overflow-y-auto">
+                    <div class="mb-6 rounded-[1.2rem] border border-slate-200/80 bg-white/70 px-4 py-4 dark:border-white/10 dark:bg-white/5">
+                        <p class="cms-kicker text-[0.7rem] font-semibold uppercase tracking-[0.32em]">Navigation</p>
+                        <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-stone-300">Manage tenant content, app data, and runtime configuration from one workspace.</p>
+                    </div>
+
+                    <nav class="space-y-2">
+                        @php
+                            $navigation = [
+                                ['label' => 'Dashboard', 'route' => 'cms.dashboard'],
+                                ['label' => 'Menus', 'route' => 'cms.menus.index'],
+                                ['label' => 'Content Categories', 'route' => 'cms.categories.index'],
+                                ['label' => 'FAQs', 'route' => 'cms.faqs.index'],
+                                ['label' => 'Quizzes', 'route' => 'cms.quizzes.index'],
+                                ['label' => 'Services', 'route' => 'cms.services.index'],
+                                ['label' => 'Settings', 'route' => 'cms.settings.index'],
+                            ];
+                        @endphp
+
+                        @foreach ($navigation as $item)
+                            <a
+                                href="{{ route($item['route']) }}"
+                                class="cms-nav-link flex items-center justify-between px-4 py-3 text-sm font-medium {{ request()->routeIs($item['route']) || request()->routeIs($item['route'].'.*') ? 'cms-nav-link-active text-slate-900 dark:text-white' : 'text-slate-700 dark:text-stone-300' }}"
+                            >
+                                <span>{{ $item['label'] }}</span>
+                                <span class="text-[0.68rem] uppercase tracking-[0.3em] text-slate-400 dark:text-stone-500">Open</span>
+                            </a>
+                        @endforeach
+                    </nav>
+                </aside>
+
+                <main class="min-w-0 pb-6 h-fit lg:h-full lg:overflow-y-auto">
+                    <div class="mx-auto max-w-7xl">
+                        <header class="cms-panel cms-gradient-card mb-6 px-6 py-6 sm:px-8">
+                            <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                                <div>
+                                    <p class="cms-kicker text-xs font-semibold uppercase tracking-[0.35em]">{{ $eyebrow ?? 'Content Management System' }}</p>
+                                    <h2 class="cms-heading mt-2 text-3xl font-bold tracking-tight">{{ $heading ?? 'CMS' }}</h2>
+                                    @if (! empty($subheading ?? null))
+                                        <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-stone-300">{{ $subheading }}</p>
+                                    @endif
+                                </div>
+
+                                @isset($headerAction)
+                                    <div class="shrink-0">
+                                        {{ $headerAction }}
+                                    </div>
+                                @endisset
+                            </div>
+                        </header>
+
+                        @if (session('status'))
+                            <div class="cms-panel mb-6 border border-emerald-200/70 bg-emerald-50/90 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100">
+                                {{ session('status') }}
+                            </div>
+                        @endif
+
+                        @if ($errors->any())
+                            <div class="cms-panel mb-6 border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100">
+                                <p class="font-semibold">Please correct the highlighted fields.</p>
+                                <ul class="mt-2 space-y-1 text-rose-700/90 dark:text-rose-50/90">
+                                    @foreach ($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+
+                        {{ $slot }}
+                    </div>
+                </main>
+            </div>
         </div>
 
         <script>

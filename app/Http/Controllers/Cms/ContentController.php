@@ -36,7 +36,9 @@ class ContentController extends Controller
 
     public function store(ContentRequest $request): RedirectResponse
     {
-        Content::create($this->validatedPayload($request));
+        $content = Content::create($this->validatedPayload($request));
+
+        $this->syncMedia($request, $content);
 
         return redirect()
             ->route('cms.contents.index')
@@ -61,6 +63,8 @@ class ContentController extends Controller
     {
         $content->update($this->validatedPayload($request, $content));
 
+        $this->syncMedia($request, $content);
+
         return redirect()
             ->route('cms.contents.index')
             ->with('status', 'Content entry updated.');
@@ -80,6 +84,8 @@ class ContentController extends Controller
         $payload = $request->validated();
         $userId = $request->user()?->id;
 
+        unset($payload['featured_image_upload'], $payload['attachments']);
+
         if (($payload['status'] ?? null) === 'published' && blank($payload['published_at'] ?? null)) {
             $payload['published_at'] = Carbon::now();
         }
@@ -88,5 +94,24 @@ class ContentController extends Controller
         $payload['updated_by'] = $userId;
 
         return $payload;
+    }
+
+    private function syncMedia(ContentRequest $request, Content $content): void
+    {
+        if ($request->hasFile('featured_image_upload')) {
+            $content
+                ->addMediaFromRequest('featured_image_upload')
+                ->toMediaCollection('featured_image');
+
+            $content->forceFill([
+                'featured_image_path' => $content->getFirstMediaUrl('featured_image'),
+            ])->save();
+        }
+
+        foreach ($request->file('attachments', []) as $attachment) {
+            $content
+                ->addMedia($attachment)
+                ->toMediaCollection('attachments');
+        }
     }
 }

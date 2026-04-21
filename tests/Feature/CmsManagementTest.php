@@ -138,6 +138,36 @@ class CmsManagementTest extends TestCase
         ]);
     }
 
+    public function test_menu_item_save_normalizes_dynamic_webview_payload(): void
+    {
+        $this->seed(CmsSeeder::class);
+
+        $admin = User::query()->where('email', 'admin@srhr.test')->firstOrFail();
+        $this->actingAs($admin);
+
+        $menu = Menu::query()->where('location', 'public-primary')->firstOrFail();
+
+        $this->post(route('cms.menus.items.store', $menu), [
+            'title' => 'Ask an Expert',
+            'type' => 'internal_route',
+            'target_reference' => 'content:12',
+            'route' => '/menu-pages/legacy-expert',
+            'sort_order' => 1,
+            'visibility' => 'public',
+            'open_in_webview' => 1,
+            'is_active' => 1,
+        ])->assertRedirect(route('cms.menus.edit', $menu));
+
+        $this->assertDatabaseHas('menu_items', [
+            'menu_id' => $menu->id,
+            'title' => 'Ask an Expert',
+            'type' => 'webview_page',
+            'target_reference' => 'content:12',
+            'route' => null,
+            'open_in_webview' => true,
+        ]);
+    }
+
     public function test_regular_user_cannot_access_cms(): void
     {
         $this->seed(CmsSeeder::class);

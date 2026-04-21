@@ -14,23 +14,79 @@ use Illuminate\Support\Str;
 
 class PublicNavigation
 {
+    private ?int $resolvedWebsiteId = null;
+
+    public function menus(string $location = 'public-primary'): Collection
+    {
+        if (! Schema::hasTable('menus') || ! Schema::hasTable('menu_items')) {
+            return collect();
+        }
+
+        $websiteId = $this->websiteId();
+
+        if ($websiteId === null) {
+            return collect();
+        }
+
+        return Menu::query()
+            ->withoutGlobalScope('website')
+            ->where('website_id', $websiteId)
+            ->where('location', $location)
+            ->where('is_active', true)
+            ->with([
+                'items' => fn ($query) => $query
+                    ->withoutGlobalScope('website')
+                    ->where('website_id', $websiteId)
+                    ->where('is_active', true)
+                    ->where('visibility', 'public')
+                    ->orderBy('sort_order')
+                    ->orderBy('title'),
+            ])
+            ->orderBy('name')
+            ->get()
+            ->map(function (Menu $menu): array {
+                $items = $menu->items
+                    ->whereNull('parent_id')
+                    ->sortBy('sort_order')
+                    ->values()
+                    ->map(fn (MenuItem $item): array => $this->mapItem($item, $menu->items))
+                    ->filter(fn (array $item): bool => filled($item['href']) || collect($item['children'])->isNotEmpty())
+                    ->values();
+
+                return [
+                    'title' => $menu->name,
+                    'items' => $items,
+                ];
+            })
+            ->filter(fn (array $menu): bool => collect($menu['items'])->isNotEmpty())
+            ->values();
+    }
+
     public function items(string $location = 'public-primary'): Collection
     {
-        $menu = $this->menu($location);
+        $menus = $this->menus($location);
 
-        if (! $menu) {
+        if ($menus->isEmpty()) {
             return $this->fallbackItems();
         }
 
-        $items = $menu->items
-            ->whereNull('parent_id')
-            ->sortBy('sort_order')
-            ->values()
-            ->map(fn (MenuItem $item): array => $this->mapItem($item, $menu->items))
-            ->filter(fn (array $item): bool => filled($item['href']) || collect($item['children'])->isNotEmpty())
+        $items = $menus
+            ->flatMap(fn (array $menu): Collection => collect($menu['items']))
             ->values();
 
-        return $items->isNotEmpty() ? $items : $this->fallbackItems();
+        if ($items->isEmpty()) {
+            return $this->fallbackItems();
+        }
+
+        return $items;
+    }
+
+    public function quickLinks(string $location = 'public-primary', int $limit = 5): Collection
+    {
+        return $this->collectQuickLinks($this->items($location))
+            ->unique('href')
+            ->take($limit)
+            ->values();
     }
 
     public function menu(string $location = 'public-primary'): ?Menu
@@ -39,11 +95,21 @@ class PublicNavigation
             return null;
         }
 
+        $websiteId = $this->websiteId();
+
+        if ($websiteId === null) {
+            return null;
+        }
+
         return Menu::query()
+            ->withoutGlobalScope('website')
+            ->where('website_id', $websiteId)
             ->where('location', $location)
             ->where('is_active', true)
             ->with([
                 'items' => fn ($query) => $query
+                    ->withoutGlobalScope('website')
+                    ->where('website_id', $websiteId)
                     ->where('is_active', true)
                     ->where('visibility', 'public')
                     ->orderBy('sort_order')
@@ -69,6 +135,27 @@ class PublicNavigation
         ];
     }
 
+    private function collectQuickLinks(Collection $items): Collection
+    {
+        return $items
+            ->flatMap(function (array $item): Collection {
+                $children = collect($item['children'] ?? []);
+
+                if ($children->isNotEmpty()) {
+                    $childLinks = $this->collectQuickLinks($children);
+
+                    if ($childLinks->isNotEmpty()) {
+                        return $childLinks;
+                    }
+                }
+
+                return filled($item['href'] ?? null)
+                    ? collect([['title' => $item['title'], 'href' => $item['href']]])
+                    : collect();
+            })
+            ->values();
+    }
+
     private function fallbackItems(): Collection
     {
         return collect([
@@ -82,16 +169,7 @@ class PublicNavigation
 
     private function resolveMenuItemUrl(MenuItem $item): ?string
     {
-        return match ($item->type) {
-            'content' => $this->resolveContentTarget($item->target_reference),
-            'category' => $this->resolveCategoryTarget($item->target_reference),
-            'faq' => route('public.faqs.index'),
-            'quiz' => $this->resolveQuizTarget($item->target_reference),
-            'service_locator' => route('public.services.index'),
-            'internal_route' => $this->resolveInternalRoute($item->route),
-            'external_url', 'webview_page' => $this->resolveExternalTarget($item->target_reference ?: $item->route),
-            default => null,
-        };
+        return route('public.menu-pages.show', ['menuItemName' => $item->publicPageSlug()]);
     }
 
     private function resolveContentTarget(?string $reference): ?string
@@ -106,7 +184,11 @@ class PublicNavigation
             return route('public.contents.index');
         }
 
-        $slug = Content::query()->whereKey($id)->value('slug');
+        $slug = Content::query()
+            ->withoutGlobalScope('website')
+            ->where('website_id', $this->websiteId())
+            ->whereKey($id)
+            ->value('slug');
 
         return $slug === null ? route('public.contents.index') : route('public.contents.show', $slug);
     }
@@ -123,7 +205,11 @@ class PublicNavigation
             return route('public.categories.index');
         }
 
-        $slug = ContentCategory::query()->whereKey($id)->value('slug');
+        $slug = ContentCategory::query()
+            ->withoutGlobalScope('website')
+            ->where('website_id', $this->websiteId())
+            ->whereKey($id)
+            ->value('slug');
 
         return $slug === null ? route('public.categories.index') : route('public.categories.show', $slug);
     }
@@ -140,9 +226,24 @@ class PublicNavigation
             return route('public.quizzes.index');
         }
 
-        $slug = Quiz::query()->whereKey($id)->value('slug');
+        $slug = Quiz::query()
+            ->withoutGlobalScope('website')
+            ->where('website_id', $this->websiteId())
+            ->whereKey($id)
+            ->value('slug');
 
         return $slug === null ? route('public.quizzes.index') : route('public.quizzes.show', $slug);
+    }
+
+    private function websiteId(): ?int
+    {
+        if ($this->resolvedWebsiteId !== null) {
+            return $this->resolvedWebsiteId;
+        }
+
+        $this->resolvedWebsiteId = app(CurrentWebsite::class)->id();
+
+        return $this->resolvedWebsiteId;
     }
 
     private function resolveInternalRoute(?string $route): ?string

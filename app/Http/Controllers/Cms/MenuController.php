@@ -35,14 +35,21 @@ class MenuController extends Controller
         ]);
 
         return redirect()
-            ->route('cms.menus.edit', $menu)
+            ->route('cms.menus.show', $menu)
             ->with('status', 'Menu created. Add items to define the app navigation.');
+    }
+
+    public function show(Menu $menu): View
+    {
+        return view('cms.menus.show', [
+            'menu' => $menu->load(['items.parent']),
+        ]);
     }
 
     public function edit(Menu $menu): View
     {
         return view('cms.menus.edit', [
-            'menu' => $menu->load(['items.parent']),
+            'menu' => $menu,
         ]);
     }
 
@@ -54,7 +61,7 @@ class MenuController extends Controller
         ]);
 
         return redirect()
-            ->route('cms.menus.edit', $menu)
+            ->route('cms.menus.show', $menu)
             ->with('status', 'Menu updated.');
     }
 

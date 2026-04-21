@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToWebsite;
 use App\Models\Concerns\GeneratesUniqueSlug;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,10 +10,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Faq extends Model
 {
+    use BelongsToWebsite;
     use GeneratesUniqueSlug;
     use HasFactory;
 
     protected $fillable = [
+        'website_id',
         'question',
         'slug',
         'answer',

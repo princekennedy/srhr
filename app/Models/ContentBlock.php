@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToWebsite;
 use App\Models\Content;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ContentBlock extends Model
 {
+    use BelongsToWebsite;
     use HasFactory;
 
     /**
@@ -17,6 +19,7 @@ class ContentBlock extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'website_id',
         'content_id',
         'block_type',
         'title',

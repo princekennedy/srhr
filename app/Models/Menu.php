@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToWebsite;
 use App\Models\Concerns\GeneratesUniqueSlug;
 use App\Models\MenuItem;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Menu extends Model
 {
+    use BelongsToWebsite;
     use GeneratesUniqueSlug;
     use HasFactory;
 
@@ -19,6 +21,7 @@ class Menu extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'website_id',
         'name',
         'slug',
         'description',

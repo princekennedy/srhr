@@ -8,12 +8,15 @@ use App\Models\ContentBlock;
 use App\Models\ContentCategory;
 use App\Models\Faq;
 use App\Models\Menu;
+use App\Models\MenuItem;
 use App\Models\Quiz;
 use App\Models\ServiceCenter;
 use App\Models\User;
+use App\Models\Website;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -100,6 +103,29 @@ class CmsSeeder extends Seeder
         );
         $demoYouth->syncRoles([$appUserRole]);
 
+        $website = Website::query()->updateOrCreate(
+            ['slug' => 'default-website'],
+            [
+                'name' => 'Default Website',
+                'domain' => null,
+                'is_active' => true,
+                'created_by' => $superAdmin->id,
+            ],
+        );
+
+        foreach ([$superAdmin, $admin, $demoYouth] as $user) {
+            $user->websites()->syncWithoutDetaching([
+                $website->id => [
+                    'role' => in_array($user->email, ['super-admin@srhr.test', 'admin@srhr.test'], true) ? 'owner' : 'member',
+                    'is_owner' => in_array($user->email, ['super-admin@srhr.test', 'admin@srhr.test'], true),
+                ],
+            ]);
+
+            $user->forceFill([
+                'current_website_id' => $website->id,
+            ])->save();
+        }
+
         $categories = collect([
             [
                 'name' => 'Body Literacy',
@@ -126,16 +152,32 @@ class CmsSeeder extends Seeder
                 'description' => 'Structured pathways for help-seeking, referral support, and essential service guidance.',
                 'sort_order' => 5,
             ],
-        ])->mapWithKeys(function (array $category) {
+        ])->mapWithKeys(function (array $category) use ($website) {
             $model = ContentCategory::query()->updateOrCreate(
-                ['slug' => str($category['name'])->slug()->value()],
-                [...$category, 'is_active' => true],
+                ['website_id' => $website->id, 'slug' => str($category['name'])->slug()->value()],
+                [...$category, 'website_id' => $website->id, 'is_active' => true],
             );
 
             return [$category['name'] => $model];
         });
 
         $contents = collect([
+            [
+                'title' => 'About SRHR Connect',
+                'content_type' => 'page',
+                'category' => 'Support and Referrals',
+                'summary' => 'An overview of what the platform offers, who it serves, and how it supports young people safely.',
+                'body' => 'SRHR Connect brings together trusted SRHR information, service referrals, quizzes, and help pathways in one youth-friendly digital experience.',
+                'audience' => 'general',
+            ],
+            [
+                'title' => 'Privacy and Trust Online',
+                'content_type' => 'page',
+                'category' => 'Support and Referrals',
+                'summary' => 'A clear explanation of privacy expectations, safe browsing habits, and how trust is protected in the experience.',
+                'body' => 'Young people need privacy, clarity, and control. This platform is designed to reduce stigma, protect confidence, and make trusted support easier to reach.',
+                'audience' => 'general',
+            ],
             [
                 'title' => 'Understanding Puberty Changes',
                 'content_type' => 'article',
@@ -192,12 +234,13 @@ class CmsSeeder extends Seeder
                 'body' => 'When users need urgent help, the app should surface emergency cues, trusted contacts, and the nearest relevant youth-friendly service options.',
                 'audience' => 'general',
             ],
-        ])->mapWithKeys(function (array $entry) use ($categories, $admin) {
+        ])->mapWithKeys(function (array $entry) use ($categories, $admin, $website) {
             $category = $categories[$entry['category']];
 
             $content = Content::query()->updateOrCreate(
-                ['slug' => str($entry['title'])->slug()->value()],
+                ['website_id' => $website->id, 'slug' => str($entry['title'])->slug()->value()],
                 [
+                    'website_id' => $website->id,
                     'title' => $entry['title'],
                     'summary' => $entry['summary'],
                     'body' => $entry['body'],
@@ -214,11 +257,13 @@ class CmsSeeder extends Seeder
 
             ContentBlock::query()->updateOrCreate(
                 [
+                    'website_id' => $website->id,
                     'content_id' => $content->id,
                     'block_type' => 'rich_text',
                     'sort_order' => 1,
                 ],
                 [
+                    'website_id' => $website->id,
                     'title' => 'Intro block',
                     'body' => $entry['body'],
                     'is_active' => true,
@@ -261,8 +306,9 @@ class CmsSeeder extends Seeder
 
         foreach ($faqs as $faqData) {
             Faq::query()->updateOrCreate(
-                ['slug' => str($faqData['question'])->slug()->value()],
+                ['website_id' => $website->id, 'slug' => str($faqData['question'])->slug()->value()],
                 [
+                    'website_id' => $website->id,
                     'question' => $faqData['question'],
                     'answer' => $faqData['answer'],
                     'category_id' => $categories[$faqData['category']]->id,
@@ -317,8 +363,9 @@ class CmsSeeder extends Seeder
 
         foreach ($services as $serviceData) {
             ServiceCenter::query()->updateOrCreate(
-                ['slug' => str($serviceData['name'])->slug()->value()],
+                ['website_id' => $website->id, 'slug' => str($serviceData['name'])->slug()->value()],
                 [
+                    'website_id' => $website->id,
                     'name' => $serviceData['name'],
                     'category_id' => $categories[$serviceData['category']]->id,
                     'district' => $serviceData['district'],
@@ -339,8 +386,9 @@ class CmsSeeder extends Seeder
         }
 
         $quiz = Quiz::query()->updateOrCreate(
-            ['slug' => 'srhr-basics-check-in'],
+            ['website_id' => $website->id, 'slug' => 'srhr-basics-check-in'],
             [
+                'website_id' => $website->id,
                 'title' => 'SRHR Basics Check-In',
                 'summary' => 'A short confidence-building quiz covering consent, contraception, and health-seeking behaviour.',
                 'intro_text' => 'Use this quiz to reinforce core SRHR knowledge and direct learners to follow-up content.',
@@ -390,6 +438,7 @@ class CmsSeeder extends Seeder
 
         foreach ($quizQuestions as $questionIndex => $questionData) {
             $question = $quiz->questions()->create([
+                'website_id' => $website->id,
                 'prompt' => $questionData['prompt'],
                 'help_text' => $questionData['help_text'],
                 'question_type' => 'single_choice',
@@ -399,6 +448,7 @@ class CmsSeeder extends Seeder
 
             foreach ($questionData['options'] as $optionIndex => $optionData) {
                 $question->options()->create([
+                    'website_id' => $website->id,
                     'option_text' => $optionData['option_text'],
                     'feedback' => $optionData['feedback'],
                     'is_correct' => $optionData['is_correct'],
@@ -407,100 +457,117 @@ class CmsSeeder extends Seeder
             }
         }
 
-        $settings = [
-            ['key' => 'app_name', 'label' => 'App name', 'value' => 'SRHR Connect', 'group' => 'branding', 'input_type' => 'text', 'description' => 'Primary app label shown across the Android experience.', 'is_public' => true],
-            ['key' => 'welcome_message', 'label' => 'Welcome message', 'value' => 'Private, youth-friendly SRHR guidance and service access in one place.', 'group' => 'branding', 'input_type' => 'textarea', 'description' => 'Public summary shown in the mobile client.', 'is_public' => true],
-            ['key' => 'support_phone', 'label' => 'Support phone', 'value' => '+265 999 700 800', 'group' => 'support', 'input_type' => 'text', 'description' => 'Primary support line for urgent guidance and referrals.', 'is_public' => true],
-            ['key' => 'support_email', 'label' => 'Support email', 'value' => 'support@srhr.test', 'group' => 'support', 'input_type' => 'email', 'description' => 'Primary support email surfaced to app users.', 'is_public' => true],
-            ['key' => 'theme_mode', 'label' => 'Theme mode', 'value' => 'light', 'group' => 'theme', 'input_type' => 'text', 'description' => 'Default visual theme for public clients.', 'is_public' => true],
-            ['key' => 'theme_accent', 'label' => 'Theme accent', 'value' => '#34d399', 'group' => 'theme', 'input_type' => 'text', 'description' => 'Primary accent color used across the experience.', 'is_public' => true],
-            ['key' => 'onboarding_requires_registration', 'label' => 'Require registration for person space', 'value' => '1', 'group' => 'features', 'input_type' => 'boolean', 'description' => 'Whether personalized features require account creation.', 'is_public' => true],
-            ['key' => 'cms_version_note', 'label' => 'CMS version note', 'value' => 'Comprehensive module set enabled for content, FAQs, quizzes, services, menus, and runtime settings.', 'group' => 'operations', 'input_type' => 'textarea', 'description' => 'Operational note for admins.', 'is_public' => false],
+        AppSetting::seedDefaultsForWebsite($website);
+
+        $publicMenus = [
+            [
+                'slug' => 'public-primary-about',
+                'name' => 'About',
+                'description' => 'Platform overview and trust-focused entry points for the public site.',
+                'items' => [
+                    [
+                        'title' => 'About SRHR Connect',
+                        'type' => 'webview_page',
+                        'target_reference' => 'content:'.$contents['About SRHR Connect']->id.','.$contents['Privacy and Trust Online']->id,
+                        'icon' => 'info',
+                        'sort_order' => 1,
+                        'open_in_webview' => true,
+                    ],
+                    [
+                        'title' => 'Privacy and Trust',
+                        'type' => 'content',
+                        'target_reference' => 'content:'.$contents['Privacy and Trust Online']->id,
+                        'icon' => 'shield-check',
+                        'sort_order' => 2,
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'public-primary-learn',
+                'name' => 'Learn',
+                'description' => 'Educational SRHR content and self-guided learning tools.',
+                'items' => [
+                    [
+                        'title' => 'Body Literacy',
+                        'type' => 'category',
+                        'target_reference' => 'category:'.$categories['Body Literacy']->id,
+                        'icon' => 'book-open',
+                        'sort_order' => 1,
+                    ],
+                    [
+                        'title' => 'Consent Guide',
+                        'type' => 'content',
+                        'target_reference' => 'content:'.$contents['Consent Starts With Communication']->id,
+                        'icon' => 'message-square-heart',
+                        'sort_order' => 2,
+                    ],
+                    [
+                        'title' => 'Quiz Check-In',
+                        'type' => 'quiz',
+                        'target_reference' => 'quiz:'.$quiz->id,
+                        'icon' => 'clipboard-list',
+                        'sort_order' => 3,
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'public-primary-support',
+                'name' => 'Support',
+                'description' => 'Help-seeking, FAQs, services, and referral pathways.',
+                'items' => [
+                    [
+                        'title' => 'FAQs',
+                        'type' => 'faq',
+                        'target_reference' => 'faq:index',
+                        'icon' => 'message-circle',
+                        'sort_order' => 1,
+                    ],
+                    [
+                        'title' => 'Find Services',
+                        'type' => 'service_locator',
+                        'target_reference' => 'service:index',
+                        'icon' => 'map-pin',
+                        'sort_order' => 2,
+                    ],
+                    [
+                        'title' => 'Get Help',
+                        'type' => 'content',
+                        'target_reference' => 'content:'.$contents['Where to Get Help Quickly']->id,
+                        'icon' => 'life-buoy',
+                        'sort_order' => 3,
+                    ],
+                ],
+            ],
         ];
 
-        foreach ($settings as $settingData) {
-            AppSetting::query()->updateOrCreate(
-                ['key' => $settingData['key']],
-                $settingData,
-            );
-        }
-
-        $menu = Menu::query()->updateOrCreate(
-            ['slug' => 'public-primary'],
-            [
-                'name' => 'Public Primary',
-                'description' => 'Primary navigation used by the public web experience.',
-                'location' => 'public-primary',
-                'is_active' => true,
-            ],
-        );
-
-        $items = [
-            [
-                'title' => 'Body Literacy',
-                'type' => 'category',
-                'target_reference' => 'category:'.$categories['Body Literacy']->id,
-                'icon' => 'book-open',
-                'sort_order' => 1,
-            ],
-            [
-                'title' => 'Consent Guide',
-                'type' => 'content',
-                'target_reference' => 'content:'.$contents['Consent Starts With Communication']->id,
-                'icon' => 'shield-check',
-                'sort_order' => 2,
-            ],
-            [
-                'title' => 'FAQs',
-                'type' => 'faq',
-                'target_reference' => 'faq:index',
-                'icon' => 'message-circle',
-                'sort_order' => 3,
-            ],
-            [
-                'title' => 'Quiz Check-In',
-                'type' => 'quiz',
-                'target_reference' => 'quiz:'.$quiz->id,
-                'icon' => 'clipboard-list',
-                'sort_order' => 4,
-            ],
-            [
-                'title' => 'Find Services',
-                'type' => 'service_locator',
-                'target_reference' => 'service:index',
-                'icon' => 'map-pin',
-                'sort_order' => 5,
-            ],
-            [
-                'title' => 'Get Help',
-                'type' => 'content',
-                'target_reference' => 'content:'.$contents['Where to Get Help Quickly']->id,
-                'icon' => 'life-buoy',
-                'sort_order' => 6,
-            ],
-            [
-                'title' => 'Admin Login',
-                'type' => 'internal_route',
-                'route' => '/login',
-                'icon' => 'lock',
-                'sort_order' => 7,
-            ],
-        ];
-
-        foreach ($items as $item) {
-            $menu->items()->updateOrCreate(
-                ['title' => $item['title']],
+        foreach ($publicMenus as $menuData) {
+            $menu = Menu::query()->updateOrCreate(
+                ['website_id' => $website->id, 'slug' => $menuData['slug']],
                 [
-                    'type' => $item['type'],
-                    'target_reference' => $item['target_reference'] ?? null,
-                    'route' => $item['route'] ?? null,
-                    'icon' => $item['icon'] ?? null,
-                    'sort_order' => $item['sort_order'],
-                    'visibility' => 'public',
-                    'open_in_webview' => false,
+                    'website_id' => $website->id,
+                    'name' => $menuData['name'],
+                    'description' => $menuData['description'],
+                    'location' => 'public-primary',
                     'is_active' => true,
                 ],
             );
+
+            foreach ($menuData['items'] as $item) {
+                $menu->items()->updateOrCreate(
+                    ['website_id' => $website->id, 'title' => $item['title']],
+                    MenuItem::normalizeForPersistence([
+                        'website_id' => $website->id,
+                        'type' => $item['type'],
+                        'target_reference' => $item['target_reference'] ?? null,
+                        'route' => $item['route'] ?? null,
+                        'icon' => $item['icon'] ?? null,
+                        'sort_order' => $item['sort_order'],
+                        'visibility' => 'public',
+                        'open_in_webview' => $item['open_in_webview'] ?? false,
+                        'is_active' => true,
+                    ]),
+                );
+            }
         }
     }
 }

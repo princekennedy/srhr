@@ -13,12 +13,15 @@ use App\Http\Controllers\Cms\QuizController;
 use App\Http\Controllers\Cms\ServiceCenterController;
 use App\Http\Middleware\EnsureCmsAccess;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PublicMenuPageController;
 use App\Http\Controllers\PublicContentController;
+use App\Http\Controllers\WebsiteController;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+Route::get('/menu-item/{menuItemName}', [PublicMenuPageController::class, 'show'])->name('public.menu-pages.show');
 Route::get('/topics', [PublicContentController::class, 'categories'])->name('public.categories.index');
 Route::get('/topics/{category:slug}', [PublicContentController::class, 'showCategory'])->name('public.categories.show');
 Route::get('/content', [PublicContentController::class, 'contents'])->name('public.contents.index');
@@ -38,6 +41,9 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+    Route::get('/websites', [WebsiteController::class, 'index'])->name('websites.index');
+    Route::post('/websites', [WebsiteController::class, 'store'])->name('websites.store');
+    Route::post('/websites/{website}/switch', [WebsiteController::class, 'switch'])->name('websites.switch');
     Route::get('/dashboard', function (Request $request): RedirectResponse {
         return $request->user()?->canAccessCms()
             ? redirect()->route('cms.dashboard')
@@ -53,12 +59,12 @@ Route::prefix('cms')
     ->scopeBindings()
     ->group(function (): void {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-        Route::resource('categories', ContentCategoryController::class)->except(['show']);
+        Route::resource('categories', ContentCategoryController::class);
         Route::resource('contents', ContentController::class)->except(['show']);
         Route::resource('faqs', FaqController::class)->except(['show']);
         Route::resource('quizzes', QuizController::class)->except(['show']);
         Route::resource('services', ServiceCenterController::class)->except(['show']);
-        Route::resource('menus', MenuController::class)->except(['show']);
+        Route::resource('menus', MenuController::class);
         Route::get('settings', [AppSettingController::class, 'index'])->name('settings.index');
         Route::put('settings', [AppSettingController::class, 'update'])->name('settings.update');
         Route::get('menus/{menu}/items/create', [MenuItemController::class, 'create'])->name('menus.items.create');

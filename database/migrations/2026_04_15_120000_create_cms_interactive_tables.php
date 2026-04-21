@@ -13,8 +13,9 @@ return new class extends Migration
     {
         Schema::create('faqs', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('website_id')->constrained('websites')->cascadeOnDelete();
             $table->string('question');
-            $table->string('slug')->unique();
+            $table->string('slug');
             $table->longText('answer');
             $table->foreignId('category_id')->nullable()->constrained('content_categories')->nullOnDelete();
             $table->string('audience', 30)->default('general');
@@ -26,12 +27,14 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['audience', 'visibility']);
+            $table->unique(['website_id', 'slug']);
         });
 
         Schema::create('service_centers', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('website_id')->constrained('websites')->cascadeOnDelete();
             $table->string('name');
-            $table->string('slug')->unique();
+            $table->string('slug');
             $table->foreignId('category_id')->nullable()->constrained('content_categories')->nullOnDelete();
             $table->string('district', 120)->nullable();
             $table->text('physical_address')->nullable();
@@ -49,12 +52,14 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['district', 'is_active']);
+            $table->unique(['website_id', 'slug']);
         });
 
         Schema::create('quizzes', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('website_id')->constrained('websites')->cascadeOnDelete();
             $table->string('title');
-            $table->string('slug')->unique();
+            $table->string('slug');
             $table->text('summary')->nullable();
             $table->longText('intro_text')->nullable();
             $table->string('audience', 30)->default('general');
@@ -66,10 +71,12 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['status', 'visibility']);
+            $table->unique(['website_id', 'slug']);
         });
 
         Schema::create('quiz_questions', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('website_id')->constrained('websites')->cascadeOnDelete();
             $table->foreignId('quiz_id')->constrained('quizzes')->cascadeOnDelete();
             $table->text('prompt');
             $table->text('help_text')->nullable();
@@ -83,6 +90,7 @@ return new class extends Migration
 
         Schema::create('quiz_options', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('website_id')->constrained('websites')->cascadeOnDelete();
             $table->foreignId('quiz_question_id')->constrained('quiz_questions')->cascadeOnDelete();
             $table->string('option_text');
             $table->text('feedback')->nullable();
@@ -95,7 +103,8 @@ return new class extends Migration
 
         Schema::create('app_settings', function (Blueprint $table) {
             $table->id();
-            $table->string('key')->unique();
+            $table->foreignId('website_id')->constrained('websites')->cascadeOnDelete();
+            $table->string('key');
             $table->string('label');
             $table->text('value')->nullable();
             $table->string('group', 60)->default('general');
@@ -105,6 +114,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['group', 'label']);
+            $table->unique(['website_id', 'key']);
         });
     }
 

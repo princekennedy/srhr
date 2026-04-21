@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToWebsite;
 use App\Models\Concerns\GeneratesUniqueSlug;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,12 +11,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Quiz extends Model
 {
+    use BelongsToWebsite;
     use GeneratesUniqueSlug;
     use HasFactory;
 
     public const QUESTION_TYPE_OPTIONS = ['single_choice'];
 
     protected $fillable = [
+        'website_id',
         'title',
         'slug',
         'summary',

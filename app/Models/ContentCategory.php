@@ -2,14 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToWebsite;
 use App\Models\Concerns\GeneratesUniqueSlug;
 use App\Models\Content;
+use App\Models\MenuItem;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ContentCategory extends Model
 {
+    use BelongsToWebsite;
     use GeneratesUniqueSlug;
     use HasFactory;
 
@@ -19,6 +23,8 @@ class ContentCategory extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'website_id',
+        'menu_item_id',
         'name',
         'slug',
         'description',
@@ -46,5 +52,10 @@ class ContentCategory extends Model
     public function contents(): HasMany
     {
         return $this->hasMany(Content::class, 'category_id');
+    }
+
+    public function menuItem(): BelongsTo
+    {
+        return $this->belongsTo(MenuItem::class);
     }
 }

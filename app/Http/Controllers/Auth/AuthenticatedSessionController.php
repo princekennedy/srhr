@@ -35,6 +35,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         $request->session()->regenerate();
+        $request->user()?->switchToWebsite($request->user()?->currentWebsite);
 
         if ($request->user()?->canAccessCms()) {
             return redirect()->intended(route('cms.dashboard'));

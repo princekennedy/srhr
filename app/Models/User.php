@@ -2,9 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Website;
+use App\Models\UserWebsite;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\HasApiTokens;
@@ -26,6 +31,7 @@ class User extends Authenticatable
         'email',
         'email_verified_at',
         'password',
+        'current_website_id',
     ];
 
     /**
@@ -103,5 +109,44 @@ class User extends Authenticatable
         }
 
         return false;
+    }
+
+    public function currentWebsite(): BelongsTo
+    {
+        return $this->belongsTo(Website::class, 'current_website_id');
+    }
+
+    public function ownedWebsites(): HasMany
+    {
+        return $this->hasMany(Website::class, 'created_by');
+    }
+
+    public function websiteMemberships(): HasMany
+    {
+        return $this->hasMany(UserWebsite::class);
+    }
+
+    public function websites(): BelongsToMany
+    {
+        return $this->belongsToMany(Website::class, 'user_websites')
+            ->withPivot(['role', 'is_owner'])
+            ->withTimestamps();
+    }
+
+    public function switchToWebsite(?Website $website): void
+    {
+        $targetWebsite = $website;
+
+        if ($targetWebsite !== null && ! $this->websites()->whereKey($targetWebsite->getKey())->exists()) {
+            $targetWebsite = null;
+        }
+
+        if ($targetWebsite === null) {
+            $targetWebsite = $this->websites()->orderBy('name')->first();
+        }
+
+        $this->forceFill([
+            'current_website_id' => $targetWebsite?->getKey(),
+        ])->save();
     }
 }

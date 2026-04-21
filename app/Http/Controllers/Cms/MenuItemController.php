@@ -20,12 +20,12 @@ class MenuItemController extends Controller
 
     public function store(MenuItemRequest $request, Menu $menu): RedirectResponse
     {
-        $menu->items()->create([
+        $menu->items()->create(MenuItem::normalizeForPersistence([
             ...$request->validated(),
             'sort_order' => $request->integer('sort_order'),
             'open_in_webview' => $request->boolean('open_in_webview'),
             'is_active' => $request->boolean('is_active'),
-        ]);
+        ]));
 
         return redirect()
             ->route('cms.menus.edit', $menu)
@@ -39,12 +39,12 @@ class MenuItemController extends Controller
 
     public function update(MenuItemRequest $request, Menu $menu, MenuItem $item): RedirectResponse
     {
-        $item->update([
+        $item->update(MenuItem::normalizeForPersistence([
             ...$request->validated(),
             'sort_order' => $request->integer('sort_order'),
             'open_in_webview' => $request->boolean('open_in_webview'),
             'is_active' => $request->boolean('is_active'),
-        ]);
+        ]));
 
         return redirect()
             ->route('cms.menus.edit', $menu)
