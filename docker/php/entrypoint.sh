@@ -18,10 +18,12 @@ if [ "${CACHE_LARAVEL_CONFIG:-true}" = "true" ]; then
 fi
 
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
-    php artisan migrate --force
-fi
-
-if [ "${RUN_SEEDERS:-false}" = "true" ]; then
+    if [ "${RUN_SEEDERS:-false}" = "true" ]; then
+        php artisan migrate --seed --force
+    else
+        php artisan migrate --force
+    fi
+elif [ "${RUN_SEEDERS:-false}" = "true" ]; then
     php artisan db:seed --force
 fi
 
