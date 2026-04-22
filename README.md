@@ -11,8 +11,7 @@
 
 This repository includes a production-oriented Docker stack built around:
 
-- `php-fpm` application container
-- `nginx` web container
+- `nginx` + `php-fpm` in one web container
 - `sqlite` database
 - `redis` cache and queue backend
 - dedicated `queue` and `scheduler` services
@@ -30,13 +29,14 @@ Basic deployment flow:
 
 1. Create a dedicated Docker env file from `.env.docker.example`.
 2. Start the stack with `docker compose --env-file .env.docker.example up --build -d`.
-3. The `app` service will run migrations automatically when `DOCKER_RUN_MIGRATIONS=true`.
+3. The `web` service will run migrations automatically when `DOCKER_RUN_MIGRATIONS=true`.
 4. The public app will be available on `http://localhost` or the port set by `DOCKER_WEB_PORT`.
 
 Notes:
 
 - The compose stack uses `DOCKER_*` variables so it does not accidentally inherit your local Laravel `.env` values.
 - The Docker deployment stores SQLite in the named volume `sqlite_data` at `/var/lib/srhr/database.sqlite`.
+- The `web` image is self-contained and runs both `php-fpm` and `nginx`, so it does not depend on a separate `app` hostname at runtime.
 - Uploaded media is persisted in the named Docker volume `storage_data`.
 - Static uploads are served by nginx through `/storage/`.
 - The queue worker and scheduler run as separate containers using the same application image.

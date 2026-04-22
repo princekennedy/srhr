@@ -3,6 +3,7 @@ package com.example.myapplication.model
 data class AppBootstrap(
     val menuTitle: String? = null,
     val menuItems: List<CmsMenuItem> = emptyList(),
+    val heroSlides: List<CmsHeroSlide> = emptyList(),
     val categories: List<CmsCategory> = emptyList(),
     val featuredContents: List<CmsContent> = emptyList(),
     val faqs: List<CmsFaq> = emptyList(),
@@ -21,6 +22,20 @@ data class CmsMenuItem(
     val route: String?,
     val openInWebView: Boolean,
     val children: List<CmsMenuItem> = emptyList(),
+)
+
+data class CmsHeroSlide(
+    val image: String?,
+    val kicker: String?,
+    val title: String,
+    val description: String?,
+    val buttons: List<CmsHeroButton> = emptyList(),
+)
+
+data class CmsHeroButton(
+    val text: String,
+    val link: String?,
+    val style: String,
 )
 
 data class CmsCategory(

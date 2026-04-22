@@ -9,8 +9,9 @@ use App\Models\ContentCategory;
 use App\Models\Faq;
 use App\Models\Menu;
 use App\Models\MenuItem;
-use App\Models\ServiceCenter;
 use App\Models\Quiz;
+use App\Models\ServiceCenter;
+use App\Models\Slider;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -80,6 +81,7 @@ class AppDataController extends Controller
                 'location' => $menu?->location,
                 'items' => $menu === null ? [] : $this->menuTree($menu->items->where('is_active', true)->where('visibility', 'public')),
             ],
+            'hero_slides' => $this->heroSlidesPayload(),
             'categories' => $categories,
             'featured_contents' => $contents,
             'faqs' => $faqs,
@@ -259,6 +261,72 @@ class AppDataController extends Controller
                 'description' => $category->description,
                 'contents_count' => $category->contents_count,
             ])->values()->all();
+    }
+
+    private function heroSlidesPayload(): array
+    {
+        $slides = Slider::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Slider $slide): array => [
+                'image' => $slide->imageUrl() ?: asset('seed/hero-slide-1.svg'),
+                'kicker' => $slide->kicker,
+                'title' => $slide->title,
+                'description' => $slide->caption,
+                'buttons' => collect([
+                    filled($slide->primary_button_text) ? [
+                        'text' => $slide->primary_button_text,
+                        'link' => $slide->primary_button_link ?: '#',
+                        'style' => 'primary',
+                    ] : null,
+                    filled($slide->secondary_button_text) ? [
+                        'text' => $slide->secondary_button_text,
+                        'link' => $slide->secondary_button_link ?: '#',
+                        'style' => 'secondary',
+                    ] : null,
+                ])->filter()->values()->all(),
+            ])
+            ->values()
+            ->all();
+
+        if ($slides !== []) {
+            return $slides;
+        }
+
+        return [
+            [
+                'image' => asset('seed/hero-slide-1.svg'),
+                'kicker' => 'Modern digital experiences',
+                'title' => 'Build a beautiful online presence that grows your brand',
+                'description' => 'Launch faster with a clean landing page, elegant navigation, and a polished image slider that makes your business stand out.',
+                'buttons' => [
+                    ['text' => 'Start Project', 'link' => '#', 'style' => 'primary'],
+                    ['text' => 'Explore Features', 'link' => '#features', 'style' => 'secondary'],
+                ],
+            ],
+            [
+                'image' => asset('seed/hero-slide-2.svg'),
+                'kicker' => 'Creative and responsive',
+                'title' => 'Design that looks premium on every screen',
+                'description' => 'Use Tailwind CSS to create responsive layouts, dropdown menus, and eye-catching sections with minimal effort.',
+                'buttons' => [
+                    ['text' => 'View Demo', 'link' => '#', 'style' => 'primary'],
+                    ['text' => 'Talk to Us', 'link' => '#contact', 'style' => 'secondary'],
+                ],
+            ],
+            [
+                'image' => asset('seed/hero-slide-3.svg'),
+                'kicker' => 'Simple. Elegant. Effective.',
+                'title' => 'Showcase your services with confidence',
+                'description' => 'Present your products, services, and value clearly with a page structure that is clean, modern, and conversion-focused.',
+                'buttons' => [
+                    ['text' => 'Get Quote', 'link' => '#', 'style' => 'primary'],
+                    ['text' => 'Learn More', 'link' => '#features', 'style' => 'secondary'],
+                ],
+            ],
+        ];
     }
 
     private function contentsPayload(int $limit = 12, bool $includeBlocks = false, ?string $type = null, ?string $audience = null, ?string $category = null, ?string $search = null): array

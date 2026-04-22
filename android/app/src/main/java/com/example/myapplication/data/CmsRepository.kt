@@ -4,6 +4,8 @@ import com.example.myapplication.model.AppBootstrap
 import com.example.myapplication.model.CmsCategory
 import com.example.myapplication.model.CmsContent
 import com.example.myapplication.model.CmsFaq
+import com.example.myapplication.model.CmsHeroButton
+import com.example.myapplication.model.CmsHeroSlide
 import com.example.myapplication.model.CmsMenuItem
 import com.example.myapplication.model.CmsQuiz
 import com.example.myapplication.model.CmsServiceCenter
@@ -64,6 +66,7 @@ class CmsRepository(
                         menuItems = data.optJSONObject("menu")
                             ?.optJSONArray("items")
                             .toMenuItemList(),
+                        heroSlides = data.optJSONArray("hero_slides").toHeroSlideList(),
                         categories = data.optJSONArray("categories").toCategoryList(),
                         featuredContents = data.optJSONArray("featured_contents").toContentList(),
                         faqs = data.optJSONArray("faqs").toFaqList(),
@@ -115,6 +118,42 @@ class CmsRepository(
                     name = item.optString("name"),
                     description = item.optStringOrNull("description"),
                     contentsCount = item.optInt("contents_count"),
+                ),
+            )
+        }
+    }
+
+    private fun JSONArray?.toHeroSlideList(): List<CmsHeroSlide> = buildList {
+        if (this@toHeroSlideList == null) {
+            return@buildList
+        }
+
+        for (index in 0 until length()) {
+            val item = optJSONObject(index) ?: continue
+            add(
+                CmsHeroSlide(
+                    image = item.optStringOrNull("image"),
+                    kicker = item.optStringOrNull("kicker"),
+                    title = item.optString("title"),
+                    description = item.optStringOrNull("description"),
+                    buttons = item.optJSONArray("buttons").toHeroButtonList(),
+                ),
+            )
+        }
+    }
+
+    private fun JSONArray?.toHeroButtonList(): List<CmsHeroButton> = buildList {
+        if (this@toHeroButtonList == null) {
+            return@buildList
+        }
+
+        for (index in 0 until length()) {
+            val item = optJSONObject(index) ?: continue
+            add(
+                CmsHeroButton(
+                    text = item.optString("text"),
+                    link = item.optStringOrNull("link"),
+                    style = item.optString("style"),
                 ),
             )
         }

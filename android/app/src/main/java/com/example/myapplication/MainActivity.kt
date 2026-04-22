@@ -3,7 +3,9 @@ package com.example.myapplication
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +13,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -52,9 +56,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -69,10 +76,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.layout.height
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.decode.SvgDecoder
+import coil.request.ImageRequest
 import com.example.myapplication.data.AppPreferencesRepository
 import com.example.myapplication.data.AuthRepository
 import com.example.myapplication.data.CmsRepository
@@ -81,6 +91,7 @@ import com.example.myapplication.model.AppBootstrap
 import com.example.myapplication.model.AuthResult
 import com.example.myapplication.model.CmsContent
 import com.example.myapplication.model.CmsFaq
+import com.example.myapplication.model.CmsHeroSlide
 import com.example.myapplication.model.CmsMenuItem
 import com.example.myapplication.model.CmsQuiz
 import com.example.myapplication.model.CmsServiceCenter
@@ -186,6 +197,7 @@ private fun SrhrApp(
             composable(Destination.Welcome.route) {
                 WelcomeScreen(
                     settings = settings,
+                    bootstrap = bootstrap,
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onOpenPersonSpace = {
                         navController.navigate(
@@ -242,17 +254,24 @@ private fun SrhrApp(
 @Composable
 private fun WelcomeScreen(
     settings: AppSettings,
+    bootstrap: AppBootstrap?,
     onOpenDrawer: () -> Unit,
     onOpenPersonSpace: () -> Unit,
     onOpenPublicSpace: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
-    val pagerState = rememberPagerState(pageCount = { 3 })
+    val appName = bootstrap?.settingValue("app_name") ?: "SRHR Connect"
+    val welcomeMessage = bootstrap?.settingValue("welcome_message")
+        ?: "Launch faster with a clean landing page, elegant navigation, and trusted SRHR content that works across web and mobile."
+    val heroSlides = bootstrap?.heroSlides?.takeIf { it.isNotEmpty() } ?: defaultHeroSlides()
+    val featureCards = bootstrap?.featuredContents?.take(3)?.takeIf { it.isNotEmpty() } ?: defaultFeatureCards()
+    val menuHighlights = bootstrap?.menuItems?.take(4).orEmpty()
+    val pagerState = rememberPagerState(pageCount = { heroSlides.size })
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("SRHR Connect") },
+                title = { Text(appName) },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
                         Icon(Icons.Filled.Menu, contentDescription = "Menu")
@@ -274,74 +293,387 @@ private fun WelcomeScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             item {
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(260.dp)
-                        .background(
-                            brush = Brush.linearGradient(listOf(Lagoon, Coral)),
-                            shape = RoundedCornerShape(32.dp),
-                        )
-                ) { page ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            val title = when (page) {
-                                0 -> "Welcome"
-                                1 -> "Learn & Grow"
-                                else -> "Stay Private"
-                            }
-                            val desc = when (page) {
-                                0 -> "Choose a private person space or a public learning space."
-                                1 -> "Explore our CMS-managed resources."
-                                else -> "Your data is kept private with personalized access."
-                            }
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                text = desc,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White.copy(alpha = 0.92f),
-                            )
-                        }
-                    }
-                }
+                LandingHeroCarousel(
+                    appName = appName,
+                    welcomeMessage = welcomeMessage,
+                    slides = heroSlides,
+                    pagerState = pagerState,
+                    onOpenPublicSpace = onOpenPublicSpace,
+                    onOpenPersonSpace = onOpenPersonSpace,
+                    hasSession = !settings.authToken.isNullOrBlank(),
+                )
             }
             item {
                 StatusStrip(baseUrl = settings.baseUrl, hasSession = !settings.authToken.isNullOrBlank())
             }
             item {
-                SpaceChoiceCard(
-                    title = "Person Space",
-                    description = "Registered-only space for personalized access, permissions, and future saved content.",
-                    icon = Icons.Filled.Lock,
-                    accent = MaterialTheme.colorScheme.primary,
-                    actionLabel = if (settings.authToken.isNullOrBlank()) "Register to continue" else "Open person space",
-                    onClick = onOpenPersonSpace,
+                SectionIntro(
+                    title = "Everything you need for a strong first impression",
+                    description = welcomeMessage,
                 )
             }
+            items(featureCards) { content ->
+                LandingFeatureCard(content = content)
+            }
+            if (menuHighlights.isNotEmpty()) {
+                item {
+                    LandingMenuStrip(menuTitle = bootstrap?.menuTitle, items = menuHighlights)
+                }
+            }
             item {
-                SpaceChoiceCard(
-                    title = "Public Space",
-                    description = "General information, safe guidance, and resource-focused content without sign-in.",
-                    icon = Icons.Filled.Public,
-                    accent = MaterialTheme.colorScheme.secondary,
-                    actionLabel = "Enter public space",
-                    onClick = onOpenPublicSpace,
+                LandingCtaCard(
+                    appName = appName,
+                    supportEmail = bootstrap?.settingValue("support_email"),
+                    supportPhone = bootstrap?.settingValue("support_phone"),
+                    onOpenPublicSpace = onOpenPublicSpace,
+                    onOpenPersonSpace = onOpenPersonSpace,
+                    hasSession = !settings.authToken.isNullOrBlank(),
                 )
             }
         }
     }
 }
+
+@Composable
+private fun LandingHeroCarousel(
+    appName: String,
+    welcomeMessage: String,
+    slides: List<CmsHeroSlide>,
+    pagerState: androidx.compose.foundation.pager.PagerState,
+    onOpenPublicSpace: () -> Unit,
+    onOpenPersonSpace: () -> Unit,
+    hasSession: Boolean,
+) {
+    val imageLoader = rememberHeroImageLoader()
+    val context = LocalContext.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(420.dp)
+            .clip(RoundedCornerShape(32.dp)),
+    ) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+        ) { page ->
+            val slide = slides[page]
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                slide.image?.takeIf { it.isNotBlank() }?.let { imageUrl ->
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(imageUrl)
+                            .crossfade(true)
+                            .build(),
+                        imageLoader = imageLoader,
+                        contentDescription = slide.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0x66111A21),
+                                    Color(0xCC111A21),
+                                ),
+                            ),
+                        ),
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.Bottom,
+                ) {
+                    Text(
+                        text = appName,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    slide.kicker?.takeIf { it.isNotBlank() }?.let { kicker ->
+                        Text(
+                            text = kicker,
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(999.dp))
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                    Text(
+                        text = slide.title,
+                        modifier = Modifier.padding(top = 12.dp),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = slide.description ?: welcomeMessage,
+                        modifier = Modifier.padding(top = 12.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.92f),
+                    )
+                    Row(
+                        modifier = Modifier.padding(top = 18.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Button(onClick = onOpenPublicSpace, shape = RoundedCornerShape(999.dp)) {
+                            Text("Enter public space")
+                        }
+                        OutlinedButton(
+                            onClick = onOpenPersonSpace,
+                            shape = RoundedCornerShape(999.dp),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.42f)),
+                        ) {
+                            Text(
+                                text = if (hasSession) "Open person space" else "Register to continue",
+                                color = Color.White,
+                            )
+                        }
+                    }
+                    if (slide.buttons.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier.padding(top = 14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            slide.buttons.take(2).forEach { button ->
+                                Text(
+                                    text = button.text,
+                                    modifier = Modifier
+                                        .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(999.dp))
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    color = Color.White.copy(alpha = 0.88f),
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            slides.forEachIndexed { index, _ ->
+                Box(
+                    modifier = Modifier
+                        .size(if (index == pagerState.currentPage) 10.dp else 8.dp)
+                        .background(
+                            color = if (index == pagerState.currentPage) Color.White else Color.White.copy(alpha = 0.45f),
+                            shape = CircleShape,
+                        ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionIntro(
+    title: String,
+    description: String,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun LandingFeatureCard(content: CmsContent) {
+    ElevatedCard(shape = RoundedCornerShape(28.dp)) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = listOfNotNull(content.contentType, content.audience).joinToString(" | "),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = content.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = content.summary ?: "No summary available.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            content.category?.takeIf { it.isNotBlank() }?.let { category ->
+                Text(
+                    text = category,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LandingMenuStrip(
+    menuTitle: String?,
+    items: List<CmsMenuItem>,
+) {
+    ElevatedCard(shape = RoundedCornerShape(28.dp)) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = menuTitle ?: "Explore",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items.forEach { item ->
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(item.title) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LandingCtaCard(
+    appName: String,
+    supportEmail: String?,
+    supportPhone: String?,
+    onOpenPublicSpace: () -> Unit,
+    onOpenPersonSpace: () -> Unit,
+    hasSession: Boolean,
+) {
+    Card(
+        shape = RoundedCornerShape(32.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Brush.horizontalGradient(listOf(Lagoon, Coral)))
+                .padding(24.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "Ready to explore $appName?",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = listOfNotNull(supportPhone, supportEmail).joinToString("  •  ").ifBlank {
+                        "Use the public space for trusted guidance or open person space for your private session."
+                    },
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.92f),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = onOpenPublicSpace,
+                        shape = RoundedCornerShape(999.dp),
+                    ) {
+                        Text("Public space")
+                    }
+                    OutlinedButton(
+                        onClick = onOpenPersonSpace,
+                        shape = RoundedCornerShape(999.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.42f)),
+                    ) {
+                        Text(
+                            text = if (hasSession) "Person space" else "Register",
+                            color = Color.White,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun rememberHeroImageLoader(): ImageLoader {
+    val context = LocalContext.current
+
+    return remember(context) {
+        ImageLoader.Builder(context)
+            .components {
+                add(SvgDecoder.Factory())
+            }
+            .build()
+    }
+}
+
+private fun defaultHeroSlides(): List<CmsHeroSlide> = listOf(
+    CmsHeroSlide(
+        image = null,
+        kicker = "Modern digital experiences",
+        title = "Build a beautiful online presence that grows your brand",
+        description = "Launch faster with a clean landing page, elegant navigation, and a polished image slider that makes your business stand out.",
+    ),
+    CmsHeroSlide(
+        image = null,
+        kicker = "Creative and responsive",
+        title = "Design that looks premium on every screen",
+        description = "Use Tailwind CSS to create responsive layouts, dropdown menus, and eye-catching sections with minimal effort.",
+    ),
+    CmsHeroSlide(
+        image = null,
+        kicker = "Simple. Elegant. Effective.",
+        title = "Showcase your services with confidence",
+        description = "Present your products, services, and value clearly with a page structure that is clean, modern, and conversion-focused.",
+    ),
+)
+
+private fun defaultFeatureCards(): List<CmsContent> = listOf(
+    CmsContent(
+        title = "Beautiful UI",
+        summary = "Clean typography, soft shadows, and balanced spacing create a premium look.",
+        contentType = "feature",
+        audience = "all users",
+        category = "Design",
+    ),
+    CmsContent(
+        title = "Responsive Design",
+        summary = "Looks great on desktop, tablet, and mobile with a mobile-friendly menu.",
+        contentType = "feature",
+        audience = "all users",
+        category = "Experience",
+    ),
+    CmsContent(
+        title = "Easy to Customize",
+        summary = "Edit text, replace images, update colors, and connect your content in minutes.",
+        contentType = "feature",
+        audience = "all users",
+        category = "Content",
+    ),
+)
 
 @Composable
 private fun StatusStrip(baseUrl: String, hasSession: Boolean) {
