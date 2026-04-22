@@ -13,7 +13,7 @@ This repository includes a production-oriented Docker stack built around:
 
 - `php-fpm` application container
 - `nginx` web container
-- `mariadb` database
+- `sqlite` database
 - `redis` cache and queue backend
 - dedicated `queue` and `scheduler` services
 
@@ -36,6 +36,7 @@ Basic deployment flow:
 Notes:
 
 - The compose stack uses `DOCKER_*` variables so it does not accidentally inherit your local Laravel `.env` values.
+- The Docker deployment stores SQLite in the named volume `sqlite_data` at `/var/lib/srhr/database.sqlite`.
 - Uploaded media is persisted in the named Docker volume `storage_data`.
 - Static uploads are served by nginx through `/storage/`.
 - The queue worker and scheduler run as separate containers using the same application image.
