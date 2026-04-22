@@ -7,6 +7,7 @@ use App\Models\Menu;
 use App\Models\User;
 use Database\Seeders\CmsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -25,6 +26,7 @@ class CmsManagementTest extends TestCase
             'cms.manage.faqs',
             'cms.manage.quizzes',
             'cms.manage.services',
+            'cms.manage.sliders',
             'cms.manage.menus',
             'cms.manage.settings',
         ];
@@ -62,6 +64,7 @@ class CmsManagementTest extends TestCase
         $this->get(route('cms.faqs.index'))->assertOk();
         $this->get(route('cms.quizzes.index'))->assertOk();
         $this->get(route('cms.services.index'))->assertOk();
+        $this->get(route('cms.sliders.index'))->assertOk();
         $this->get(route('cms.menus.index'))->assertOk();
         $this->get(route('cms.settings.index'))->assertOk();
     }
@@ -165,6 +168,34 @@ class CmsManagementTest extends TestCase
             'target_reference' => 'content:12',
             'route' => null,
             'open_in_webview' => true,
+        ]);
+    }
+
+    public function test_admin_can_create_slider_entry(): void
+    {
+        $this->seed(CmsSeeder::class);
+
+        $admin = User::query()->where('email', 'admin@srhr.test')->firstOrFail();
+        $this->actingAs($admin);
+
+        $this->post(route('cms.sliders.store'), [
+            'title' => 'Trusted support when you need it most',
+            'kicker' => 'Always available',
+            'caption' => 'Give users a clear path to services and reliable information from the first screen.',
+            'primary_button_text' => 'Find Support',
+            'primary_button_link' => '#support',
+            'secondary_button_text' => 'Learn More',
+            'secondary_button_link' => '#features',
+            'sort_order' => 9,
+            'is_active' => 1,
+            'image_upload' => UploadedFile::fake()->image('slide.jpg', 1600, 900),
+        ])->assertRedirect(route('cms.sliders.index'));
+
+        $this->assertDatabaseHas('sliders', [
+            'title' => 'Trusted support when you need it most',
+            'kicker' => 'Always available',
+            'sort_order' => 9,
+            'is_active' => true,
         ]);
     }
 

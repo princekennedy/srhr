@@ -93,14 +93,16 @@ class MenuItem extends Model
         $targetReference = static::normalizeNullableString($attributes['target_reference'] ?? null);
         $openInWebview = static::normalizeBoolean($attributes['open_in_webview'] ?? false);
 
-        if (static::shouldUseWebviewPageType($type, $route, $targetReference, $openInWebview)) {
-            $type = 'webview_page';
-            $route = null;
-            $openInWebview = true;
+        if ($route === null && $type !== 'external_url') {
+            $title = $attributes['title'] ?? '';
+            $slug = Str::slug($title);
+            $menuItemName = $slug !== '' ? $slug : 'item';
+            $route = '/menu-item/' . $menuItemName;
         }
 
-        if (! in_array($type, ['internal_route', 'external_url'], true)) {
-            $route = null;
+        if (static::shouldUseWebviewPageType($type, $route, $targetReference, $openInWebview)) {
+            $type = 'webview_page';
+            $openInWebview = true;
         }
 
         return [

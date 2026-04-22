@@ -25,6 +25,17 @@ class WebAuthTest extends TestCase
         $response->assertSee('Build a beautiful online presence that grows your brand');
     }
 
+    public function test_home_page_uses_seeded_slider_content(): void
+    {
+        $this->seed(CmsSeeder::class);
+
+        $response = $this->get(route('home'));
+
+        $response->assertOk();
+        $response->assertSee('Simple. Elegant. Effective.');
+        $response->assertSee('Showcase your services with confidence');
+    }
+
     public function test_guest_can_view_auth_pages(): void
     {
         $this->get(route('login'))->assertOk()->assertSee('Log in');

@@ -1,45 +1,66 @@
 @php
-    $heroSliderSetting = \App\Models\AppSetting::where('key', 'hero_slider')->first();
-    $dbImages = $heroSliderSetting ? $heroSliderSetting->getMedia('setting_asset')->map->getUrl()->toArray() : [];
-    
-    $slides = [
-        [
-            'image' => $dbImages[0] ?? 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80',
-            'kicker' => 'Modern digital experiences',
-            'title' => 'Build a beautiful online presence that grows your brand',
-            'desc' => 'Launch faster with a clean landing page, elegant navigation, and a polished image slider that makes your business stand out.',
-            'buttons' => [
-              ['text' => 'Start Project', 'link' => '#', 'class' => 'bg-indigo-600 hover:bg-indigo-700'],
-              ['text' => 'Explore Features', 'link' => '#features', 'class' => 'border border-white/40 hover:bg-white/10']
-            ]
-        ],
-        [
-            'image' => $dbImages[1] ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80',
-            'kicker' => 'Creative and responsive',
-            'title' => 'Design that looks premium on every screen',
-            'desc' => 'Use Tailwind CSS to create responsive layouts, dropdown menus, and eye-catching sections with minimal effort.',
-            'buttons' => [
-              ['text' => 'View Demo', 'link' => '#', 'class' => 'bg-indigo-600 hover:bg-indigo-700'],
-              ['text' => 'Talk to Us', 'link' => '#contact', 'class' => 'border border-white/40 hover:bg-white/10']
-            ]
-        ],
-        [
-            'image' => $dbImages[2] ?? 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=80',
-            'kicker' => 'Simple. Elegant. Effective.',
-            'title' => 'Showcase your services with confidence',
-            'desc' => 'Present your products, services, and value clearly with a page structure that is clean, modern, and conversion-focused.',
-            'buttons' => [
-              ['text' => 'Get Quote', 'link' => '#', 'class' => 'bg-indigo-600 hover:bg-indigo-700'],
-              ['text' => 'Learn More', 'link' => '#features', 'class' => 'border border-white/40 hover:bg-white/10']
-            ]
+  $slides = collect();
+
+  if (\Illuminate\Support\Facades\Schema::hasTable('sliders')) {
+    $slides = \App\Models\Slider::query()
+      ->where('is_active', true)
+      ->orderBy('sort_order')
+      ->get()
+      ->map(function (\App\Models\Slider $slide): array {
+        return [
+          'image' => $slide->imageUrl() ?: asset('seed/hero-slide-1.svg'),
+          'kicker' => $slide->kicker,
+          'title' => $slide->title,
+          'desc' => $slide->caption,
+          'buttons' => collect([
+            filled($slide->primary_button_text) ? ['text' => $slide->primary_button_text, 'link' => $slide->primary_button_link ?: '#', 'class' => 'bg-indigo-600 hover:bg-indigo-700'] : null,
+            filled($slide->secondary_button_text) ? ['text' => $slide->secondary_button_text, 'link' => $slide->secondary_button_link ?: '#', 'class' => 'border border-white/40 hover:bg-white/10'] : null,
+          ])->filter()->values()->all(),
+        ];
+      })
+      ->values();
+  }
+
+  if ($slides->isEmpty()) {
+    $slides = collect([
+      [
+        'image' => asset('seed/hero-slide-1.svg'),
+        'kicker' => 'Modern digital experiences',
+        'title' => 'Build a beautiful online presence that grows your brand',
+        'desc' => 'Launch faster with a clean landing page, elegant navigation, and a polished image slider that makes your business stand out.',
+        'buttons' => [
+          ['text' => 'Start Project', 'link' => '#', 'class' => 'bg-indigo-600 hover:bg-indigo-700'],
+          ['text' => 'Explore Features', 'link' => '#features', 'class' => 'border border-white/40 hover:bg-white/10']
         ]
-    ];
+      ],
+      [
+        'image' => asset('seed/hero-slide-2.svg'),
+        'kicker' => 'Creative and responsive',
+        'title' => 'Design that looks premium on every screen',
+        'desc' => 'Use Tailwind CSS to create responsive layouts, dropdown menus, and eye-catching sections with minimal effort.',
+        'buttons' => [
+          ['text' => 'View Demo', 'link' => '#', 'class' => 'bg-indigo-600 hover:bg-indigo-700'],
+          ['text' => 'Talk to Us', 'link' => '#contact', 'class' => 'border border-white/40 hover:bg-white/10']
+        ]
+      ],
+      [
+        'image' => asset('seed/hero-slide-3.svg'),
+        'kicker' => 'Simple. Elegant. Effective.',
+        'title' => 'Showcase your services with confidence',
+        'desc' => 'Present your products, services, and value clearly with a page structure that is clean, modern, and conversion-focused.',
+        'buttons' => [
+          ['text' => 'Get Quote', 'link' => '#', 'class' => 'bg-indigo-600 hover:bg-indigo-700'],
+          ['text' => 'Learn More', 'link' => '#features', 'class' => 'border border-white/40 hover:bg-white/10']
+        ]
+      ],
+    ]);
+  }
 @endphp
 <section id="home" class="relative overflow-hidden">
   <div class="relative h-[85vh] min-h-[560px] w-full">
     @foreach ($slides as $index => $slide)
     <div class="slide absolute inset-0 transition-opacity duration-700 {{ $index === 0 ? 'opacity-100' : 'opacity-0' }}">
-      <img src="{{ $slide['image'] }}" class="h-full w-full object-cover" alt="Slide {{ $index + 1 }}" />
+      <img src="{{ $slide['image'] }}" class="h-full w-full object-cover" alt="{{ $slide['title'] ?: 'Slide '.($index + 1) }}" />
       <div class="absolute inset-0 bg-slate-900/55"></div>
       <div class="absolute inset-0 flex items-center">
         <div class="mx-auto max-w-7xl px-6 lg:px-8">
@@ -62,9 +83,9 @@
     <button id="nextBtn" class="absolute right-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/20 p-3 text-white backdrop-blur hover:bg-white/30">❯</button>
 
     <div class="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 gap-3">
-      <button class="dot h-3 w-3 rounded-full bg-white"></button>
-      <button class="dot h-3 w-3 rounded-full bg-white/50"></button>
-      <button class="dot h-3 w-3 rounded-full bg-white/50"></button>
+      @foreach ($slides as $index => $slide)
+        <button class="dot h-3 w-3 rounded-full {{ $index === 0 ? 'bg-white' : 'bg-white/50' }}"></button>
+      @endforeach
     </div>
   </div>
 

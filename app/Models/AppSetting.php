@@ -47,7 +47,6 @@ class AppSetting extends Model implements HasMedia
         $settings = [
             ['key' => 'app_name', 'label' => 'App name', 'value' => 'SRHR Connect', 'group' => 'branding', 'input_type' => 'text', 'description' => 'Primary app label shown across the Android experience.', 'is_public' => true],
             ['key' => 'welcome_message', 'label' => 'Welcome message', 'value' => 'Private, youth-friendly SRHR guidance and service access in one place.', 'group' => 'branding', 'input_type' => 'textarea', 'description' => 'Public summary shown in the mobile client.', 'is_public' => true],
-            ['key' => 'hero_slider', 'label' => 'Hero slider images', 'value' => null, 'group' => 'homepage', 'input_type' => 'upload_multiple', 'description' => 'Upload the homepage slide images.', 'is_public' => true],
             ['key' => 'support_phone', 'label' => 'Support phone', 'value' => '+265 999 700 800', 'group' => 'support', 'input_type' => 'text', 'description' => 'Primary support line for urgent guidance and referrals.', 'is_public' => true],
             ['key' => 'support_email', 'label' => 'Support email', 'value' => 'support@srhr.test', 'group' => 'support', 'input_type' => 'email', 'description' => 'Primary support email surfaced to app users.', 'is_public' => true],
             ['key' => 'theme_mode', 'label' => 'Theme mode', 'value' => 'light', 'group' => 'theme', 'input_type' => 'text', 'description' => 'Default visual theme for public clients.', 'is_public' => true],
@@ -57,30 +56,10 @@ class AppSetting extends Model implements HasMedia
         ];
 
         foreach ($settings as $settingData) {
-            $setting = self::query()->updateOrCreate(
+            self::query()->updateOrCreate(
                 ['website_id' => $website->id, 'key' => $settingData['key']],
                 [...$settingData, 'website_id' => $website->id],
             );
-
-            if ($setting->key === 'hero_slider' && $setting->getMedia('setting_asset')->isEmpty()) {
-                $sliderImages = [
-                    'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80',
-                    'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80',
-                    'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=80'
-                ];
-                $urls = [];
-                foreach ($sliderImages as $url) {
-                    try {
-                        $media = $setting->addMediaFromUrl($url)->toMediaCollection('setting_asset');
-                        $urls[] = $media->getUrl();
-                    } catch (\Exception $e) {
-                        // ignore and use fallback
-                    }
-                }
-                if (count($urls)) {
-                    $setting->update(['value' => json_encode($urls)]);
-                }
-            }
         }
     }
 }

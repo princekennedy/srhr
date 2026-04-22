@@ -11,11 +11,13 @@ use App\Models\Menu;
 use App\Models\MenuItem;
 use App\Models\Quiz;
 use App\Models\ServiceCenter;
+use App\Models\Slider;
 use App\Models\User;
 use App\Models\Website;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -37,6 +39,7 @@ class CmsSeeder extends Seeder
             'cms.manage.faqs',
             'cms.manage.quizzes',
             'cms.manage.services',
+            'cms.manage.sliders',
             'cms.manage.menus',
             'cms.manage.settings',
             'app.access.person-space',
@@ -459,6 +462,66 @@ class CmsSeeder extends Seeder
 
         AppSetting::seedDefaultsForWebsite($website);
 
+        $sliderRecords = [
+            [
+                'title' => 'Build a beautiful online presence that grows your brand',
+                'kicker' => 'Modern digital experiences',
+                'caption' => 'Launch faster with a clean landing page, elegant navigation, and a polished image slider that makes your business stand out.',
+                'primary_button_text' => 'Start Project',
+                'primary_button_link' => '#',
+                'secondary_button_text' => 'Explore Features',
+                'secondary_button_link' => '#features',
+                'sort_order' => 1,
+                'asset' => base_path('public/seed/hero-slide-1.svg'),
+            ],
+            [
+                'title' => 'Design that looks premium on every screen',
+                'kicker' => 'Creative and responsive',
+                'caption' => 'Use Tailwind CSS to create responsive layouts, dropdown menus, and eye-catching sections with minimal effort.',
+                'primary_button_text' => 'View Demo',
+                'primary_button_link' => '#',
+                'secondary_button_text' => 'Talk to Us',
+                'secondary_button_link' => '#contact',
+                'sort_order' => 2,
+                'asset' => base_path('public/seed/hero-slide-2.svg'),
+            ],
+            [
+                'title' => 'Showcase your services with confidence',
+                'kicker' => 'Simple. Elegant. Effective.',
+                'caption' => 'Present your products, services, and value clearly with a page structure that is clean, modern, and conversion-focused.',
+                'primary_button_text' => 'Get Quote',
+                'primary_button_link' => '#',
+                'secondary_button_text' => 'Learn More',
+                'secondary_button_link' => '#features',
+                'sort_order' => 3,
+                'asset' => base_path('public/seed/hero-slide-3.svg'),
+            ],
+        ];
+
+        foreach ($sliderRecords as $sliderData) {
+            $slider = Slider::query()->updateOrCreate(
+                ['website_id' => $website->id, 'slug' => str($sliderData['title'])->slug()->value()],
+                [
+                    'website_id' => $website->id,
+                    'title' => $sliderData['title'],
+                    'kicker' => $sliderData['kicker'],
+                    'caption' => $sliderData['caption'],
+                    'primary_button_text' => $sliderData['primary_button_text'],
+                    'primary_button_link' => $sliderData['primary_button_link'],
+                    'secondary_button_text' => $sliderData['secondary_button_text'],
+                    'secondary_button_link' => $sliderData['secondary_button_link'],
+                    'sort_order' => $sliderData['sort_order'],
+                    'is_active' => true,
+                    'created_by' => $admin->id,
+                    'updated_by' => $admin->id,
+                ],
+            );
+
+            if ($slider->getFirstMedia('slide_image') === null && is_file($sliderData['asset'])) {
+                $slider->addMedia($sliderData['asset'])->preservingOriginal()->toMediaCollection('slide_image');
+            }
+        }
+
         $publicMenus = [
             [
                 'slug' => 'public-primary-about',
@@ -553,13 +616,17 @@ class CmsSeeder extends Seeder
             );
 
             foreach ($menuData['items'] as $item) {
+                $slug = Str::slug($item['title']);
+                $menuItemName = $slug !== '' ? $slug : 'item';
+                $route = $item['route'] ?? '/menu-item/'.$menuItemName;
+
                 $menu->items()->updateOrCreate(
                     ['website_id' => $website->id, 'title' => $item['title']],
                     MenuItem::normalizeForPersistence([
                         'website_id' => $website->id,
                         'type' => $item['type'],
                         'target_reference' => $item['target_reference'] ?? null,
-                        'route' => $item['route'] ?? null,
+                        'route' => $route,
                         'icon' => $item['icon'] ?? null,
                         'sort_order' => $item['sort_order'],
                         'visibility' => 'public',

@@ -60,6 +60,16 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.layout.height
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -114,73 +124,140 @@ private fun SrhrApp(
 ) {
     val navController = rememberNavController()
     val settings by preferencesRepository.settings.collectAsState(initial = AppSettings())
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    var bootstrap by remember { mutableStateOf<AppBootstrap?>(null) }
 
-    NavHost(navController = navController, startDestination = Destination.Welcome.route) {
-        composable(Destination.Welcome.route) {
-            WelcomeScreen(
-                settings = settings,
-                onOpenPersonSpace = {
-                    navController.navigate(
-                        if (settings.authToken.isNullOrBlank()) Destination.Register.route else Destination.PersonSpace.route,
+    LaunchedEffect(settings.baseUrl, settings.authToken) {
+        if (settings.baseUrl.isNotBlank()) {
+            val result = cmsRepository.fetchBootstrap(settings.baseUrl, settings.authToken)
+            bootstrap = result.getOrNull()
+        }
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                Text(
+                    text = bootstrap?.settingValue("app_name") ?: "SRHR Connect",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                HorizontalDivider()
+                
+                NavigationDrawerItem(
+                    label = { Text("Home") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        navController.navigate(Destination.Welcome.route) { popUpTo(0) }
+                    },
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+
+                bootstrap?.menuItems?.forEach { item ->
+                    NavigationDrawerItem(
+                        label = { Text(item.title) },
+                        selected = false,
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                        },
+                        modifier = Modifier.padding(horizontal = 12.dp)
                     )
-                },
-                onOpenPublicSpace = { navController.navigate(Destination.PublicSpace.route) },
-                onOpenSettings = { navController.navigate(Destination.Settings.route) },
-            )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                if (!settings.authToken.isNullOrBlank()) {
+                    NavigationDrawerItem(
+                        label = { Text("Person Space") },
+                        selected = false,
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            navController.navigate(Destination.PersonSpace.route)
+                        },
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                }
+            }
         }
-        composable(Destination.Register.route) {
-            RegistrationScreen(
-                settings = settings,
-                authRepository = authRepository,
-                preferencesRepository = preferencesRepository,
-                onBack = { navController.popBackStack() },
-                onOpenSettings = { navController.navigate(Destination.Settings.route) },
-                onRegistered = {
-                    navController.navigate(Destination.PersonSpace.route) {
-                        popUpTo(Destination.Welcome.route)
-                    }
-                },
-            )
-        }
-        composable(Destination.PublicSpace.route) {
-            PublicSpaceScreen(
-                settings = settings,
-                cmsRepository = cmsRepository,
-                onBack = { navController.popBackStack() },
-                onOpenSettings = { navController.navigate(Destination.Settings.route) },
-            )
-        }
-        composable(Destination.PersonSpace.route) {
-            PersonSpaceScreen(
-                settings = settings,
-                authRepository = authRepository,
-                preferencesRepository = preferencesRepository,
-                onBack = { navController.popBackStack() },
-                onRegister = { navController.navigate(Destination.Register.route) },
-            )
-        }
-        composable(Destination.Settings.route) {
-            SettingsScreen(
-                settings = settings,
-                preferencesRepository = preferencesRepository,
-                navController = navController,
-            )
+    ) {
+        NavHost(navController = navController, startDestination = Destination.Welcome.route) {
+            composable(Destination.Welcome.route) {
+                WelcomeScreen(
+                    settings = settings,
+                    onOpenDrawer = { scope.launch { drawerState.open() } },
+                    onOpenPersonSpace = {
+                        navController.navigate(
+                            if (settings.authToken.isNullOrBlank()) Destination.Register.route else Destination.PersonSpace.route,
+                        )
+                    },
+                    onOpenPublicSpace = { navController.navigate(Destination.PublicSpace.route) },
+                    onOpenSettings = { navController.navigate(Destination.Settings.route) },
+                )
+            }
+            composable(Destination.Register.route) {
+                RegistrationScreen(
+                    settings = settings,
+                    authRepository = authRepository,
+                    preferencesRepository = preferencesRepository,
+                    onBack = { navController.popBackStack() },
+                    onOpenSettings = { navController.navigate(Destination.Settings.route) },
+                    onRegistered = {
+                        navController.navigate(Destination.PersonSpace.route) {
+                            popUpTo(Destination.Welcome.route)
+                        }
+                    },
+                )
+            }
+            composable(Destination.PublicSpace.route) {
+                PublicSpaceScreen(
+                    settings = settings,
+                    cmsRepository = cmsRepository,
+                    onBack = { navController.popBackStack() },
+                    onOpenSettings = { navController.navigate(Destination.Settings.route) },
+                )
+            }
+            composable(Destination.PersonSpace.route) {
+                PersonSpaceScreen(
+                    settings = settings,
+                    authRepository = authRepository,
+                    preferencesRepository = preferencesRepository,
+                    onBack = { navController.popBackStack() },
+                    onRegister = { navController.navigate(Destination.Register.route) },
+                )
+            }
+            composable(Destination.Settings.route) {
+                SettingsScreen(
+                    settings = settings,
+                    preferencesRepository = preferencesRepository,
+                    navController = navController,
+                )
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun WelcomeScreen(
     settings: AppSettings,
+    onOpenDrawer: () -> Unit,
     onOpenPersonSpace: () -> Unit,
     onOpenPublicSpace: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
+    val pagerState = rememberPagerState(pageCount = { 3 })
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("SRHR Connect") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Filled.Menu, contentDescription = "Menu")
+                    }
+                },
                 actions = {
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
@@ -197,32 +274,45 @@ private fun WelcomeScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             item {
-                Box(
+                HorizontalPager(
+                    state = pagerState,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .height(260.dp)
                         .background(
                             brush = Brush.linearGradient(listOf(Lagoon, Coral)),
                             shape = RoundedCornerShape(32.dp),
                         )
-                        .padding(24.dp),
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            text = "Welcome",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = Color.White.copy(alpha = 0.8f),
-                        )
-                        Text(
-                            text = "Choose a private person space or a public learning space.",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text(
-                            text = "Person Space requires registration and will pull permission data from the backend. Public Space keeps general information and resources open to everyone.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = Color.White.copy(alpha = 0.92f),
-                        )
+                ) { page ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            val title = when (page) {
+                                0 -> "Welcome"
+                                1 -> "Learn & Grow"
+                                else -> "Stay Private"
+                            }
+                            val desc = when (page) {
+                                0 -> "Choose a private person space or a public learning space."
+                                1 -> "Explore our CMS-managed resources."
+                                else -> "Your data is kept private with personalized access."
+                            }
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                text = desc,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White.copy(alpha = 0.92f),
+                            )
+                        }
                     }
                 }
             }

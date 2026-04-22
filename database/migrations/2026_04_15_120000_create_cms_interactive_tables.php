@@ -116,6 +116,27 @@ return new class extends Migration
             $table->index(['group', 'label']);
             $table->unique(['website_id', 'key']);
         });
+
+        Schema::create('sliders', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('website_id')->constrained('websites')->cascadeOnDelete();
+            $table->string('title');
+            $table->string('slug');
+            $table->string('kicker', 120)->nullable();
+            $table->text('caption')->nullable();
+            $table->string('primary_button_text', 80)->nullable();
+            $table->string('primary_button_link')->nullable();
+            $table->string('secondary_button_text', 80)->nullable();
+            $table->string('secondary_button_link')->nullable();
+            $table->unsignedInteger('sort_order')->default(0);
+            $table->boolean('is_active')->default(true);
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamps();
+
+            $table->index(['is_active', 'sort_order']);
+            $table->unique(['website_id', 'slug']);
+        });
     }
 
     /**
@@ -123,6 +144,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('sliders');
         Schema::dropIfExists('app_settings');
         Schema::dropIfExists('quiz_options');
         Schema::dropIfExists('quiz_questions');

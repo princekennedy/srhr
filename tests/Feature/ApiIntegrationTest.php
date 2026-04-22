@@ -65,7 +65,7 @@ class ApiIntegrationTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonCount(5, 'data.categories')
-            ->assertJsonCount(7, 'data.featured_contents')
+            ->assertJsonCount(8, 'data.featured_contents')
             ->assertJsonCount(4, 'data.faqs')
             ->assertJsonCount(1, 'data.quizzes')
             ->assertJsonCount(3, 'data.services')

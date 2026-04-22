@@ -59,6 +59,13 @@ class EnsureCmsAccess
                 'cms.services.destroy',
             ], $routeName) => 'cms.manage.services',
             Str::is([
+                'cms.sliders.create',
+                'cms.sliders.store',
+                'cms.sliders.edit',
+                'cms.sliders.update',
+                'cms.sliders.destroy',
+            ], $routeName) => 'cms.manage.sliders',
+            Str::is([
                 'cms.menus.create',
                 'cms.menus.store',
                 'cms.menus.edit',

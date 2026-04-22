@@ -64,6 +64,7 @@
                             $navigation = [
                                 ['label' => 'Dashboard', 'route' => 'cms.dashboard'],
                                 ['label' => 'Menus', 'route' => 'cms.menus.index'],
+                                ['label' => 'Sliders', 'route' => 'cms.sliders.index'],
                                 ['label' => 'Content Categories', 'route' => 'cms.categories.index'],
                                 ['label' => 'FAQs', 'route' => 'cms.faqs.index'],
                                 ['label' => 'Quizzes', 'route' => 'cms.quizzes.index'],

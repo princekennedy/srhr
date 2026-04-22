@@ -11,6 +11,7 @@ use App\Http\Controllers\Cms\MenuController;
 use App\Http\Controllers\Cms\MenuItemController;
 use App\Http\Controllers\Cms\QuizController;
 use App\Http\Controllers\Cms\ServiceCenterController;
+use App\Http\Controllers\Cms\SliderController;
 use App\Http\Middleware\EnsureCmsAccess;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PublicMenuPageController;
@@ -64,6 +65,7 @@ Route::prefix('cms')
         Route::resource('faqs', FaqController::class)->except(['show']);
         Route::resource('quizzes', QuizController::class)->except(['show']);
         Route::resource('services', ServiceCenterController::class)->except(['show']);
+        Route::resource('sliders', SliderController::class)->except(['show']);
         Route::resource('menus', MenuController::class);
         Route::get('settings', [AppSettingController::class, 'index'])->name('settings.index');
         Route::put('settings', [AppSettingController::class, 'update'])->name('settings.update');

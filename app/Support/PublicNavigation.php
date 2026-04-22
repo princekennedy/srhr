@@ -169,7 +169,15 @@ class PublicNavigation
 
     private function resolveMenuItemUrl(MenuItem $item): ?string
     {
-        return route('public.menu-pages.show', ['menuItemName' => $item->publicPageSlug()]);
+        if ($item->type === 'external_url') {
+            return $this->resolveExternalTarget($item->route ?? $item->target_reference);
+        }
+
+        if ($item->type === 'internal_route') {
+            return $this->resolveInternalRoute($item->route);
+        }
+
+        return $item->route ?? route('public.menu-pages.show', ['menuItemName' => $item->publicPageSlug()]);
     }
 
     private function resolveContentTarget(?string $reference): ?string
