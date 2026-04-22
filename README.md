@@ -13,7 +13,7 @@ This repository includes a production-oriented Docker stack built around:
 
 - `nginx` + `php-fpm` in one web container
 - `sqlite` database
-- `redis` cache and queue backend
+- file/database-backed cache, sessions, and queues
 - dedicated `queue` and `scheduler` services
 
 Files added for deployment:
@@ -38,6 +38,7 @@ Notes:
 - The Docker deployment stores SQLite in the named volume `sqlite_data` at `/var/lib/srhr/database.sqlite`.
 - The `web` image is self-contained and runs both `php-fpm` and `nginx`, so it does not depend on a separate `app` hostname at runtime.
 - The default Docker env now seeds baseline CMS/app data on startup, which is useful for first-run SQLite deployments.
+- The lightweight Docker defaults do not require Redis; sessions and cache use files, while the queue worker uses the database-backed queue tables created by migrations.
 - The sample Docker env enables `APP_DEBUG` and sends Laravel logs to both stderr and `storage/logs/laravel.log`, so container logs show the actual exception during debugging.
 - Uploaded media is persisted in the named Docker volume `storage_data`.
 - Static uploads are served by nginx through `/storage/`.
