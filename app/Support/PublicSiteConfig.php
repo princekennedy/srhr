@@ -67,15 +67,17 @@ class PublicSiteConfig
 
     private function settingValue(AppSetting $setting): mixed
     {
-        if ($setting->value === null) {
+        $resolvedValue = $setting->resolvedValue();
+
+        if ($resolvedValue === null) {
             return null;
         }
 
         return match ($setting->input_type) {
-            'boolean' => filter_var($setting->value, FILTER_VALIDATE_BOOLEAN),
-            'number' => is_numeric($setting->value) ? $setting->value + 0 : $setting->value,
-            'json' => json_decode($setting->value, true) ?? $setting->value,
-            default => $setting->value,
+            'boolean' => filter_var($resolvedValue, FILTER_VALIDATE_BOOLEAN),
+            'number' => is_numeric($resolvedValue) ? $resolvedValue + 0 : $resolvedValue,
+            'json' => is_string($resolvedValue) ? (json_decode($resolvedValue, true) ?? $resolvedValue) : $resolvedValue,
+            default => $resolvedValue,
         };
     }
 

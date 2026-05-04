@@ -1,6 +1,6 @@
 <x-layouts.app title="Menus" eyebrow="CMS Navigation" heading="Menu builder" subheading="Create database-driven navigation structures that the app can request and render dynamically.">
     @php
-        $menuItemLayoutOptions = \App\Support\DesignLayouts::menuItemOptions();
+        $navigationLayoutOptions = \App\Support\DesignLayouts::menuItemOptions();
     @endphp
 
     @if (auth()->user()?->hasCmsPermission('cms.manage.menus'))
@@ -20,6 +20,7 @@
                             <th class="px-5 py-4 font-medium">Name</th>
                             <th class="px-5 py-4 font-medium">Location</th>
                             <th class="px-5 py-4 font-medium">Visibility</th>
+                            <th class="px-5 py-4 font-medium">Slider</th>
                             <th class="px-5 py-4 font-medium">Items</th>
                             <th class="px-5 py-4 font-medium text-right">Actions</th>
                         </tr>
@@ -33,19 +34,20 @@
                                 </td>
                                 <td class="px-5 py-4 text-slate-500 dark:text-stone-400">{{ $menu->location ?: 'Not set' }}</td>
                                 <td class="px-5 py-4 text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-stone-400">{{ ucfirst($menu->visibility ?: 'public') }}</td>
+                                <td class="px-5 py-4 text-slate-500 dark:text-stone-400">{{ $menu->slider?->title ?: 'None' }}</td>
                                 <td class="px-5 py-4 text-slate-500 dark:text-stone-400">{{ $menu->items_count }}</td>
                                 <td class="px-5 py-4">
                                     <div class="cms-action-group cms-action-group--end">
                                         <x-cms.layout-preview-launcher
-                                            section="menu-items"
+                                            section="navigation"
                                             :layout="$menu->normalizedLayoutType()"
-                                            :options="$menuItemLayoutOptions"
+                                            :options="$navigationLayoutOptions"
                                             :params="['menu_id' => $menu->id]"
                                             title="Menu Layout Preview"
                                         >
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
                                         </x-cms.layout-preview-launcher>
-                                        <a href="{{ route('cms.menus.show', $menu) }}" class="cms-action-btn cms-action-btn-sm cms-action-btn--preview" title="View items">
+                                        <a href="{{ route('cms.menus.edit', $menu) }}" class="cms-action-btn cms-action-btn-sm cms-action-btn--preview" title="Manage menu">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
                                         </a>
                                     </div>
@@ -53,7 +55,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-5 py-8 text-center text-slate-500 dark:text-stone-400">No menus yet.</td>
+                                <td colspan="6" class="px-5 py-8 text-center text-slate-500 dark:text-stone-400">No menus yet.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -76,6 +78,7 @@
                     <span>Slug: {{ $menu->slug }}</span>
                     <span>Layout: {{ $menu->normalizedLayoutType() }}</span>
                     <span>Location: {{ $menu->location ?: 'Not set' }}</span>
+                    <span>Slider: {{ $menu->slider?->title ?: 'None' }}</span>
                     <span>Visibility: {{ ucfirst($menu->visibility ?: 'public') }}</span>
                     <span>Items: {{ $menu->items_count }}</span>
                 </div>
@@ -84,16 +87,16 @@
                     @if (auth()->user()?->hasCmsPermission('cms.manage.menus'))
                         <div class="cms-action-group">
                             <x-cms.layout-preview-launcher
-                                section="menu-items"
+                                section="navigation"
                                 :layout="$menu->normalizedLayoutType()"
-                                :options="$menuItemLayoutOptions"
+                                :options="$navigationLayoutOptions"
                                 :params="['menu_id' => $menu->id]"
                                 title="Menu Layout Preview"
                                 button-class="cms-action-btn cms-action-btn-md cms-action-btn--preview"
                             >
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
                             </x-cms.layout-preview-launcher>
-                            <a href="{{ route('cms.menus.show', $menu) }}" class="cms-action-btn cms-action-btn-md cms-action-btn--preview" title="View items">
+                            <a href="{{ route('cms.menus.edit', $menu) }}" class="cms-action-btn cms-action-btn-md cms-action-btn--preview" title="Manage menu">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
                             </a>
                             <a href="{{ route('cms.menus.edit', $menu) }}" class="cms-action-btn cms-action-btn-md cms-action-btn--edit" title="Edit">

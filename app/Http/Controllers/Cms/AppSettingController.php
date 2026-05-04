@@ -35,20 +35,18 @@ class AppSettingController extends Controller
             if ($setting->input_type === 'upload_multiple' && $request->hasFile('setting_uploads.'.$key)) {
                 $setting->clearMediaCollection('setting_asset');
                 $files = is_array($request->file('setting_uploads.'.$key)) ? $request->file('setting_uploads.'.$key) : [$request->file('setting_uploads.'.$key)];
-                
-                $urls = [];
+
                 foreach ($files as $file) {
-                    $media = $setting->addMedia($file)->toMediaCollection('setting_asset');
-                    $urls[] = $media->getUrl();
+                    $setting->addMedia($file)->toMediaCollection('setting_asset');
                 }
-                $value = json_encode($urls);
+                $value = null;
             } elseif ($setting->input_type === 'upload' && $request->hasFile('setting_uploads.'.$key)) {
                 $setting->clearMediaCollection('setting_asset');
                 $setting
                     ->addMedia($request->file('setting_uploads.'.$key))
                     ->toMediaCollection('setting_asset');
 
-                $value = $setting->getFirstMediaUrl('setting_asset');
+                $value = null;
             }
 
             $setting->update([

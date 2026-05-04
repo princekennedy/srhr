@@ -83,7 +83,6 @@
                                 ['label' => 'Dashboard', 'route' => 'cms.dashboard'],
                                 ['label' => 'Websites', 'route' => 'cms.websites.index'],
                                 ['label' => 'Content', 'route' => 'cms.contents.index'],
-                                ['label' => 'Content Categories', 'route' => 'cms.categories.index'],
                                 ['label' => 'Menus', 'route' => 'cms.menus.index'],
                                 ['label' => 'Sliders', 'route' => 'cms.sliders.index'],
                                 ['label' => 'Settings', 'route' => 'cms.settings.index'],

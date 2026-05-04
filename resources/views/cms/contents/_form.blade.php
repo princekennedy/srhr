@@ -51,7 +51,6 @@
         <div>
             <label for="category_id" class="text-sm font-medium text-slate-900 dark:text-stone-200">Category</label>
             <select id="category_id" name="category_id" class="cms-select mt-2">
-                <option value="">Unassigned</option>
                 @foreach ($categories as $category)
                     <option value="{{ $category->id }}" @selected((string) old('category_id', $content->category_id ?: request('category_id')) === (string) $category->id)>{{ $category->name }}</option>
                 @endforeach
@@ -88,9 +87,9 @@
         <div>
             <label for="featured_image_upload" class="text-sm font-medium text-slate-900 dark:text-stone-200">Featured image upload</label>
             <input id="featured_image_upload" name="featured_image_upload" type="file" accept="image/*" class="cms-input mt-2 border-dashed text-sm text-slate-500 dark:text-stone-300">
-            @if ($content->getFirstMediaUrl('featured_image'))
+            @if ($content->featuredImageUrl())
                 <div class="mt-3 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/70 p-2 dark:border-white/10 dark:bg-slate-950/30">
-                    <img src="{{ $content->getFirstMediaUrl('featured_image') }}" alt="{{ $content->title }} featured image" class="h-40 w-full rounded-xl object-cover">
+                    <img src="{{ $content->featuredImageUrl() }}" alt="{{ $content->title }} featured image" class="h-40 w-full rounded-xl object-cover">
                 </div>
             @endif
         </div>

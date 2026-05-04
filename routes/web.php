@@ -3,7 +3,6 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Cms\AppSettingController;
-use App\Http\Controllers\Cms\ContentCategoryController;
 use App\Http\Controllers\Cms\ContentController;
 use App\Http\Controllers\Cms\DashboardController;
 use App\Http\Controllers\Cms\MenuController;
@@ -16,9 +15,27 @@ use App\Http\Controllers\PublicMenuPageController;
 use App\Http\Controllers\PublicContentController;
 use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\WebsiteController;
+use App\Models\Content;
+use App\Models\Menu;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+Route::bind('category', function (string $value): Content {
+    $query = Content::query()->categories();
+
+    return is_numeric($value)
+        ? $query->findOrFail((int) $value)
+        : $query->where('slug', $value)->firstOrFail();
+});
+
+Route::bind('item', function (string $value): Menu {
+    $query = Menu::query()->items();
+
+    return is_numeric($value)
+        ? $query->findOrFail((int) $value)
+        : $query->where('slug', $value)->firstOrFail();
+});
 
 Route::get('/', [PublicPageController::class, 'home'])->name('home');
 Route::get('/admin',[ HomeController::class, 'admin'])->name('admin');
@@ -59,7 +76,6 @@ Route::prefix('cms')
         Route::get('/websites', [WebsiteController::class, 'index'])->name('websites.index');
         Route::post('/websites', [WebsiteController::class, 'store'])->name('websites.store');
         Route::post('/websites/{website}/switch', [WebsiteController::class, 'switch'])->name('websites.switch');
-        Route::resource('categories', ContentCategoryController::class);
         Route::resource('contents', ContentController::class)->except(['show']);
         Route::resource('sliders', SliderController::class)->except(['show']);
         Route::resource('menus', MenuController::class);

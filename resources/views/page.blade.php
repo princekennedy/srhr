@@ -9,17 +9,19 @@
 		default => ($menu?->name ?? 'Page').' | '.data_get($publicSite ?? [], 'brand.name', 'Brandly'),
 	};
 
-	$categoryLayoutView = 'designs.content-categories.'.($category?->normalizedLayoutType() ?? 'default');
+	$categoryLayoutView = 'designs.categories.'.($category?->normalizedLayoutType() ?? 'default');
 	$contentLayoutView = 'designs.content.'.($content?->normalizedLayoutType() ?? 'default');
-	$menuItemLayoutView = 'designs.menu-items.'.($menuItem?->normalizedLayoutType() ?? 'default');
+	$navigationLayoutView = 'designs.navigation.'.($menuItem?->normalizedLayoutType() ?? 'default');
+	$menuSliderSlides = $menuSlider?->slidesPayload() ?? collect();
+	$menuSliderLayoutView = 'designs.sliders.'.($menuSlider?->normalizedLayoutType() ?? 'default');
 @endphp
 
 <x-layouts.site :title="$pageTitle">
 	@switch($pageTemplate ?? 'menu-show')
 		{{-- Menu/Standard Page Template --}}
 		@case('menu-show')
-			@if (($menu?->slug ?? null) === 'home')
-				<x-home.slider />
+			@if ($menuSlider && $menuSliderSlides->isNotEmpty())
+				@include(view()->exists($menuSliderLayoutView) ? $menuSliderLayoutView : 'designs.sliders.default', ['slides' => $menuSliderSlides])
 			@endif
 
 			<section class="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
@@ -128,11 +130,11 @@
 									</div>
 									<h2 class="text-xl font-bold text-slate-900 group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400 transition">{{ $cat->name }}</h2>
 									@if ($cat->description)
-										<p class="mt-3 flex-1 text-sm leading-6 text-slate-600 dark:text-slate-400">{{ Str::limit($cat->description, 120) }}</p>
+										<p class="mt-3 flex-1 text-sm leading-6 text-slate-600 dark:text-slate-400">{{ \Illuminate\Support\Str::limit($cat->description, 120) }}</p>
 									@endif
 									<div class="mt-6 flex items-center justify-between">
 										<span class="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-											{{ $cat->contents_count }} {{ Str::plural('article', $cat->contents_count) }}
+											{{ $cat->contents_count }} {{ \Illuminate\Support\Str::plural('article', $cat->contents_count) }}
 										</span>
 										<span class="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 group-hover:gap-2 transition-all">
 											Explore
@@ -149,7 +151,7 @@
 
 		{{-- Content Categories Show --}}
 		@case('categories-show')
-			@include(view()->exists($categoryLayoutView) ? $categoryLayoutView : 'designs.content-categories.default')
+			@include(view()->exists($categoryLayoutView) ? $categoryLayoutView : 'designs.categories.default')
 			@break
 
 		{{-- Content Index with Search --}}
@@ -233,7 +235,7 @@
 										</h2>
 										@if ($item->summary)
 											<p class="mt-3 flex-1 text-sm leading-6 text-slate-600 dark:text-slate-400">
-												{{ Str::limit($item->summary, 130) }}
+												{{ \Illuminate\Support\Str::limit($item->summary, 130) }}
 											</p>
 										@endif
 										<div class="mt-6 flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
@@ -267,7 +269,7 @@
 
 		{{-- Menu Item Show --}}
 		@case('menu-item-show')
-			@include(view()->exists($menuItemLayoutView) ? $menuItemLayoutView : 'designs.menu-items.default')
+			@include(view()->exists($navigationLayoutView) ? $navigationLayoutView : 'designs.navigation.default')
 
 			<x-slot name="scripts">
 				<script>

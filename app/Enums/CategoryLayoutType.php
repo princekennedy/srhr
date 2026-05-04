@@ -3,15 +3,15 @@
 namespace App\Enums;
 
 /**
- * Layouts available under resources/views/designs/content-categories/.
+ * Layouts available under resources/views/designs/categories/.
  * Add a new case here whenever you add a new Blade file to that folder.
  */
 enum CategoryLayoutType: string
 {
-    case Default   = 'default';    // designs/content-categories/default.blade.php
-    case Minimal   = 'minimal';    // designs/content-categories/minimal.blade.php
-    case Editorial = 'editorial';  // designs/content-categories/editorial.blade.php
-    case Card      = 'card';       // designs/content-categories/card.blade.php
+     case Default   = 'default';    // designs/categories/default.blade.php
+     case Minimal   = 'minimal';    // designs/categories/minimal.blade.php
+     case Editorial = 'editorial';  // designs/categories/editorial.blade.php
+     case Card      = 'card';       // designs/categories/card.blade.php
 
     public function label(): string
     {

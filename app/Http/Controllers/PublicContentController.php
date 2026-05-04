@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Content;
-use App\Models\ContentCategory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -11,7 +10,7 @@ class PublicContentController extends Controller
 {
     public function categories(): View
     {
-        $categories = ContentCategory::query()
+        $categories = Content::query()->categories()
             ->where('is_active', true)
             ->withCount([
                 'contents' => fn ($query) => $query
@@ -26,7 +25,7 @@ class PublicContentController extends Controller
                     ->limit(3),
             ])
             ->orderBy('sort_order')
-            ->orderBy('name')
+            ->orderBy('title')
             ->get();
 
         return view('page', [
@@ -35,7 +34,7 @@ class PublicContentController extends Controller
         ]);
     }
 
-    public function showCategory(ContentCategory $category): View
+    public function showCategory(Content $category): View
     {
         abort_unless($category->is_active, 404);
 
@@ -78,10 +77,10 @@ class PublicContentController extends Controller
             ->paginate(9)
             ->withQueryString();
 
-        $filterCategories = ContentCategory::query()
+        $filterCategories = Content::query()->categories()
             ->where('is_active', true)
             ->orderBy('sort_order')
-            ->orderBy('name')
+            ->orderBy('title')
             ->get();
 
         return view('page', [
@@ -109,7 +108,7 @@ class PublicContentController extends Controller
             ->where('status', 'published')
             ->where('visibility', 'public')
             ->whereKeyNot($content->getKey())
-            ->when($content->category_id !== null, fn ($query) => $query->where('category_id', $content->category_id))
+            ->when($content->category_id !== null, fn ($query) => $query->where('parent_id', $content->category_id))
             ->latest('published_at')
             ->limit(3)
             ->get();

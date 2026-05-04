@@ -6,8 +6,11 @@ use App\Enums\SliderLayoutType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cms\SliderRequest;
 use App\Models\Slider;
+use App\Models\SliderItem;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 
 class SliderController extends Controller
 {
@@ -31,9 +34,14 @@ class SliderController extends Controller
 
     public function store(SliderRequest $request): RedirectResponse
     {
-        $slider = Slider::create($this->validatedPayload($request));
+        $slider = DB::transaction(function () use ($request): Slider {
+            $slider = Slider::create($this->validatedPayload($request));
 
-        $this->syncMedia($request, $slider);
+            $this->syncMedia($request, $slider);
+            $this->syncItems($request, $slider);
+
+            return $slider;
+        });
 
         return redirect()
             ->route('cms.sliders.index')
@@ -42,6 +50,8 @@ class SliderController extends Controller
 
     public function edit(Slider $slider): View
     {
+        $slider->load('items.media');
+
         return view('cms.sliders.edit', [
             'slider' => $slider,
             'layoutOptions' => SliderLayoutType::options(),
@@ -50,9 +60,12 @@ class SliderController extends Controller
 
     public function update(SliderRequest $request, Slider $slider): RedirectResponse
     {
-        $slider->update($this->validatedPayload($request, $slider));
+        DB::transaction(function () use ($request, $slider): void {
+            $slider->update($this->validatedPayload($request, $slider));
 
-        $this->syncMedia($request, $slider);
+            $this->syncMedia($request, $slider);
+            $this->syncItems($request, $slider);
+        });
 
         return redirect()
             ->route('cms.sliders.index')
@@ -73,7 +86,7 @@ class SliderController extends Controller
         $payload = $request->validated();
         $userId = $request->user()?->id;
 
-        unset($payload['image_upload']);
+        unset($payload['image_upload'], $payload['items']);
 
         $payload['created_by'] = $slider?->created_by ?? $userId;
         $payload['updated_by'] = $userId;
@@ -92,5 +105,41 @@ class SliderController extends Controller
                 ->addMediaFromRequest('image_upload')
                 ->toMediaCollection('slide_image');
         }
+    }
+
+    private function syncItems(SliderRequest $request, Slider $slider): void
+    {
+        $validatedItems = data_get($request->validated(), 'items', []);
+        $keptItemIds = [];
+        $userId = $request->user()?->id;
+
+        foreach ($validatedItems as $itemIndex => $itemData) {
+            $sliderItem = filled($itemData['id'] ?? null)
+                ? $slider->items()->findOrFail($itemData['id'])
+                : new SliderItem();
+
+            $sliderItem->fill(Arr::except($itemData, ['id', 'image_upload']));
+            $sliderItem->slider()->associate($slider);
+            $sliderItem->website_id = $slider->website_id;
+            $sliderItem->created_by = $sliderItem->created_by ?? $userId;
+            $sliderItem->updated_by = $userId;
+            $sliderItem->sort_order = $request->integer("items.$itemIndex.sort_order");
+            $sliderItem->is_active = $request->boolean("items.$itemIndex.is_active");
+            $sliderItem->save();
+
+            if ($request->hasFile("items.$itemIndex.image_upload")) {
+                $sliderItem
+                    ->addMediaFromRequest("items.$itemIndex.image_upload")
+                    ->toMediaCollection('slide_image');
+            }
+
+            $keptItemIds[] = $sliderItem->id;
+        }
+
+        $slider->items()
+            ->whereNotIn('id', $keptItemIds)
+            ->get()
+            ->each
+            ->delete();
     }
 }

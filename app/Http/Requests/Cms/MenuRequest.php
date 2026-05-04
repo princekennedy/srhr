@@ -34,6 +34,7 @@ class MenuRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'layout_type' => ['required', Rule::in(MenuLayoutType::values())],
             'location' => ['nullable', 'string', 'max:255'],
+            'slider_id' => ['nullable', Rule::exists('sliders', 'id')->where(fn ($query) => $query->where('website_id', $websiteId))],
             'visibility' => ['required', Rule::in(Menu::VISIBILITY_OPTIONS)],
             'is_active' => ['nullable', 'boolean'],
         ];

@@ -19,8 +19,8 @@ use App\Enums\SliderLayoutType;
  * │ Section key          │ Enum class                                         │
  * ├──────────────────────┼────────────────────────────────────────────────────┤
  * │ content              │ App\Enums\ContentLayoutType                        │
- * │ content-categories   │ App\Enums\CategoryLayoutType                       │
- * │ menu-items           │ App\Enums\MenuItemLayoutType                       │
+ * │ categories           │ App\Enums\CategoryLayoutType                       │
+ * │ navigation           │ App\Enums\MenuItemLayoutType                       │
  * │ sliders              │ App\Enums\SliderLayoutType                         │
  * │ menus (chrome)       │ App\Enums\MenuLayoutType                           │
  * │ headers              │ App\Enums\HeaderLayoutType                         │
@@ -40,13 +40,13 @@ final class DesignLayouts
      * @var array<string, class-string>
      */
     private const MAP = [
-        'content'            => ContentLayoutType::class,
-        'content-categories' => CategoryLayoutType::class,
-        'menu-items'         => MenuItemLayoutType::class,
-        'sliders'            => SliderLayoutType::class,
-        'menus'              => MenuLayoutType::class,
-        'headers'            => HeaderLayoutType::class,
-        'footers'            => FooterLayoutType::class,
+        'content' => ContentLayoutType::class,
+        'categories' => CategoryLayoutType::class,
+        'navigation' => MenuItemLayoutType::class,
+        'sliders' => SliderLayoutType::class,
+        'menus' => MenuLayoutType::class,
+        'headers' => HeaderLayoutType::class,
+        'footers' => FooterLayoutType::class,
     ];
 
     /**

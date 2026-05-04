@@ -3,15 +3,15 @@
 namespace App\Enums;
 
 /**
- * Layouts available under resources/views/designs/menu-items/.
+ * Layouts available under resources/views/designs/navigation/.
  * Add a new case here whenever you add a new Blade file to that folder.
  */
 enum MenuItemLayoutType: string
 {
-    case Default   = 'default';    // designs/menu-items/default.blade.php
-    case Minimal   = 'minimal';    // designs/menu-items/minimal.blade.php
-    case Editorial = 'editorial';  // designs/menu-items/editorial.blade.php
-    case Card      = 'card';       // designs/menu-items/card.blade.php
+     case Default   = 'default';    // designs/navigation/default.blade.php
+     case Minimal   = 'minimal';    // designs/navigation/minimal.blade.php
+     case Editorial = 'editorial';  // designs/navigation/editorial.blade.php
+     case Card      = 'card';       // designs/navigation/card.blade.php
 
     public function label(): string
     {

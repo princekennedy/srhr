@@ -53,12 +53,18 @@ return new class extends Migration
             $table->unique(['website_id', 'slug']);
         });
 
+        Schema::table('menus', function (Blueprint $table) {
+            $table->foreignId('slider_id')->nullable()->after('location')->constrained('sliders')->nullOnDelete();
+            $table->index(['slider_id']);
+        });
+
         Schema::create('slider_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('slider_id')->constrained('sliders')->cascadeOnDelete();
             $table->foreignId('website_id')->constrained('websites')->cascadeOnDelete();
             $table->string('title');
             $table->string('slug');
+            $table->string('kicker', 120)->nullable();
             $table->text('caption')->nullable();
             $table->string('layout_type')->default('default');
             $table->string('primary_button_text', 80)->nullable();
@@ -81,6 +87,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('menus', function (Blueprint $table) {
+            $table->dropConstrainedForeignId('slider_id');
+        });
+
         Schema::dropIfExists('sliders');
         Schema::dropIfExists('slider_items');
         Schema::dropIfExists('app_settings');

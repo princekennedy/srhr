@@ -2,78 +2,65 @@
 
 namespace App\Http\Controllers\Cms;
 
-use App\Enums\MenuItemLayoutType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cms\MenuItemRequest;
-use App\Models\Content;
-use App\Models\ContentCategory;
 use App\Models\Menu;
-use App\Models\MenuItem;
-use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 
 class MenuItemController extends Controller
 {
-    public function create(Menu $menu): View
+    public function create(Menu $menu): RedirectResponse
     {
-        return view('cms.menu-items.create', $this->viewData($menu, new MenuItem()));
+        return redirect()->route('cms.menus.edit', ['menu' => $menu, 'tab' => 'children', 'item' => 'create']);
     }
 
     public function store(MenuItemRequest $request, Menu $menu): RedirectResponse
     {
-        $menu->items()->create(MenuItem::normalizeForPersistence([
+        Menu::query()->items()->create(Menu::normalizeForPersistence([
             ...$request->validated(),
+            'parent_id' => $request->filled('parent_id') ? $request->integer('parent_id') : $menu->id,
             'sort_order' => $request->integer('sort_order'),
             'open_in_webview' => $request->boolean('open_in_webview'),
             'is_active' => $request->boolean('is_active'),
         ]));
 
         return redirect()
-            ->route('cms.menus.edit', $menu)
+            ->route('cms.menus.edit', ['menu' => $menu, 'tab' => 'children'])
             ->with('status', 'Menu item created.');
     }
 
-    public function edit(Menu $menu, MenuItem $item): View
+    public function edit(Menu $menu, Menu $item): RedirectResponse
     {
-        return view('cms.menu-items.edit', $this->viewData($menu, $item));
+        abort_unless($item->belongsToMenu($menu), 404);
+
+        return redirect()->route('cms.menus.edit', ['menu' => $menu, 'tab' => 'children', 'item' => $item->id]);
     }
 
-    public function update(MenuItemRequest $request, Menu $menu, MenuItem $item): RedirectResponse
+    public function update(MenuItemRequest $request, Menu $menu, Menu $item): RedirectResponse
     {
-        $item->update(MenuItem::normalizeForPersistence([
+        abort_unless($item->belongsToMenu($menu), 404);
+
+        $item->update(Menu::normalizeForPersistence([
             ...$request->validated(),
+            'parent_id' => $request->filled('parent_id') ? $request->integer('parent_id') : $menu->id,
             'sort_order' => $request->integer('sort_order'),
             'open_in_webview' => $request->boolean('open_in_webview'),
             'is_active' => $request->boolean('is_active'),
         ]));
 
         return redirect()
-            ->route('cms.menus.edit', $menu)
+            ->route('cms.menus.edit', ['menu' => $menu, 'tab' => 'children', 'item' => $item->id])
             ->with('status', 'Menu item updated.');
     }
 
-    public function destroy(Menu $menu, MenuItem $item): RedirectResponse
+    public function destroy(Menu $menu, Menu $item): RedirectResponse
     {
+        abort_unless($item->belongsToMenu($menu), 404);
+
         $item->delete();
 
         return redirect()
-            ->route('cms.menus.edit', $menu)
+            ->route('cms.menus.edit', ['menu' => $menu, 'tab' => 'children'])
             ->with('status', 'Menu item deleted.');
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function viewData(Menu $menu, MenuItem $item): array
-    {
-        return [
-            'menu' => $menu,
-            'item' => $item,
-            'visibilityOptions' => MenuItem::VISIBILITY_OPTIONS,
-            'layoutOptions' => MenuItemLayoutType::options(),
-            'parentOptions' => $menu->items()->orderBy('title')->get(),
-            'contentOptions' => Content::query()->orderBy('title')->get(['id', 'title']),
-            'categoryOptions' => ContentCategory::query()->orderBy('name')->get(['id', 'name']),
-        ];
     }
 }

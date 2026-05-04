@@ -23,12 +23,12 @@
             <label for="layout_type" class="text-sm font-medium text-slate-900 dark:text-stone-200">Layout</label>
             <x-cms.layout-picker
                 name="layout_type"
-                section="menu-items"
+                section="navigation"
                 :options="$layoutOptions"
                 :value="old('layout_type', $menu->normalizedLayoutType())"
                 label="Menu"
             />
-            <p class="mt-2 text-sm text-slate-500 dark:text-stone-400">Menu item pages use templates from resources/views/designs/menu-items with default as fallback.</p>
+            <p class="mt-2 text-sm text-slate-500 dark:text-stone-400">Menu navigation pages use templates from resources/views/designs/navigation with default as fallback.</p>
         </div>
     </section>
 
@@ -36,6 +36,17 @@
         <div>
             <label for="location" class="text-sm font-medium text-slate-900 dark:text-stone-200">Location key</label>
             <input id="location" name="location" type="text" value="{{ old('location', $menu->location) }}" class="cms-input mt-2" placeholder="home-primary">
+        </div>
+
+        <div>
+            <label for="slider_id" class="text-sm font-medium text-slate-900 dark:text-stone-200">Top slider</label>
+            <select id="slider_id" name="slider_id" class="cms-input mt-2">
+                <option value="">No slider</option>
+                @foreach (($sliderOptions ?? collect()) as $sliderOption)
+                    <option value="{{ $sliderOption->id }}" @selected((string) old('slider_id', $menu->slider_id) === (string) $sliderOption->id)>{{ $sliderOption->title }}</option>
+                @endforeach
+            </select>
+            <p class="mt-2 text-sm text-slate-500 dark:text-stone-400">If linked, this slider renders at the top of the public menu page before the content sections.</p>
         </div>
 
         <div>

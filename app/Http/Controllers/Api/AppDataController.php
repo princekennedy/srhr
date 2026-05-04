@@ -5,9 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\Content;
-use App\Models\ContentCategory;
 use App\Models\Menu;
-use App\Models\MenuItem;
 use App\Models\Slider;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -182,7 +180,7 @@ class AppDataController extends Controller
 
     private function categoriesPayload(array $allowedVisibilities): array
     {
-        return ContentCategory::query()
+        return Content::query()->categories()
             ->where('is_active', true)
             ->withCount([
                 'contents' => fn ($query) => $query
@@ -190,9 +188,9 @@ class AppDataController extends Controller
                     ->whereIn('visibility', $allowedVisibilities),
             ])
             ->orderBy('sort_order')
-            ->orderBy('name')
+            ->orderBy('title')
             ->get()
-            ->map(fn (ContentCategory $category): array => [
+            ->map(fn (Content $category): array => [
                 'id' => $category->id,
                 'name' => $category->name,
                 'slug' => $category->slug,
@@ -205,29 +203,23 @@ class AppDataController extends Controller
     private function heroSlidesPayload(): array
     {
         $slides = Slider::query()
+            ->with(['media', 'items.media'])
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get()
-            ->map(fn (Slider $slide): array => [
-                'image' => $slide->imageUrl() ?: asset('seed/hero-slide-1.svg'),
-                'kicker' => $slide->kicker,
-                'title' => $slide->title,
+            ->flatMap(fn (Slider $slide) => $slide->slidesPayload()->map(fn (array $item): array => [
+                'image' => $item['image'],
+                'kicker' => $item['kicker'] ?? null,
+                'title' => $item['title'],
                 'layout_type' => $slide->layout_type ?: 'default',
-                'description' => $slide->caption,
-                'buttons' => collect([
-                    filled($slide->primary_button_text) ? [
-                        'text' => $slide->primary_button_text,
-                        'link' => $slide->primary_button_link ?: '#',
-                        'style' => 'primary',
-                    ] : null,
-                    filled($slide->secondary_button_text) ? [
-                        'text' => $slide->secondary_button_text,
-                        'link' => $slide->secondary_button_link ?: '#',
-                        'style' => 'secondary',
-                    ] : null,
-                ])->filter()->values()->all(),
-            ])
+                'description' => $item['desc'] ?? null,
+                'buttons' => collect($item['buttons'] ?? [])->map(fn (array $button): array => [
+                    'text' => $button['text'],
+                    'link' => $button['link'],
+                    'style' => $button['style'] ?? 'primary',
+                ])->values()->all(),
+            ]))
             ->values()
             ->all();
 
@@ -329,15 +321,17 @@ class AppDataController extends Controller
 
     private function settingValue(AppSetting $setting): mixed
     {
-        if ($setting->value === null) {
+        $resolvedValue = $setting->resolvedValue();
+
+        if ($resolvedValue === null) {
             return null;
         }
 
         return match ($setting->input_type) {
-            'boolean' => filter_var($setting->value, FILTER_VALIDATE_BOOLEAN),
-            'number' => is_numeric($setting->value) ? $setting->value + 0 : $setting->value,
-            'json' => json_decode($setting->value, true) ?? $setting->value,
-            default => $setting->value,
+            'boolean' => filter_var($resolvedValue, FILTER_VALIDATE_BOOLEAN),
+            'number' => is_numeric($resolvedValue) ? $resolvedValue + 0 : $resolvedValue,
+            'json' => is_string($resolvedValue) ? (json_decode($resolvedValue, true) ?? $resolvedValue) : $resolvedValue,
+            default => $resolvedValue,
         };
     }
 
@@ -346,7 +340,7 @@ class AppDataController extends Controller
      */
     private function allowedMenuVisibilities(Request $request): array
     {
-        return $request->user() === null ? ['public'] : MenuItem::VISIBILITY_OPTIONS;
+        return $request->user() === null ? ['public'] : Menu::VISIBILITY_OPTIONS;
     }
 
     /**
@@ -361,7 +355,7 @@ class AppDataController extends Controller
     {
         return $items
             ->where('parent_id', $parentId)
-            ->map(function (MenuItem $item) use ($items): array {
+            ->map(function (Menu $item) use ($items): array {
                 return [
                     'id' => $item->id,
                     'title' => $item->title,

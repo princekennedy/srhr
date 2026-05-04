@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Content;
-use App\Models\ContentCategory;
 use App\Support\PublicNavigation;
 use App\Support\PublicSiteConfig;
 use Illuminate\Contracts\View\View;
@@ -18,7 +17,6 @@ class HomeController extends Controller
     {
         try {
             $hasCmsTables = Schema::hasTable('contents')
-                && Schema::hasTable('content_categories')
                 && Schema::hasTable('menus');
 
             $primaryMenuItems = $navigation->items();
@@ -33,7 +31,7 @@ class HomeController extends Controller
                     ->get()
                 : new Collection();
             $categories = $hasCmsTables
-                ? ContentCategory::query()
+                ? Content::query()->categories()
                     ->where('is_active', true)
                     ->withCount([
                         'contents' => fn ($query) => $query
@@ -41,7 +39,7 @@ class HomeController extends Controller
                             ->where('visibility', 'public'),
                     ])
                     ->orderBy('sort_order')
-                    ->orderBy('name')
+                    ->orderBy('title')
                     ->limit(6)
                     ->get()
                 : new Collection();

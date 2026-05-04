@@ -25,11 +25,11 @@
                                 <textarea id="setting_{{ $setting->key }}" name="settings[{{ $setting->key }}]" rows="4" class="cms-textarea mt-2">{{ old('settings.'.$setting->key, $setting->value) }}</textarea>
                             @elseif ($setting->input_type === 'upload' || $setting->input_type === 'upload_multiple')
                                 <input id="setting_{{ $setting->key }}" name="setting_uploads[{{ $setting->key }}]{{ $setting->input_type === 'upload_multiple' ? '[]' : '' }}" type="file" accept="image/*" class="cms-input mt-2 border-dashed text-sm text-slate-500 dark:text-stone-300" {{ $setting->input_type === 'upload_multiple' ? 'multiple' : '' }}>
-                                <input type="hidden" name="settings[{{ $setting->key }}]" value="{{ old('settings.'.$setting->key, is_array($setting->value) ? json_encode($setting->value) : $setting->value) }}">
+                                <input type="hidden" name="settings[{{ $setting->key }}]" value="{{ old('settings.'.$setting->key, is_array($setting->resolvedValue()) ? json_encode($setting->resolvedValue()) : $setting->resolvedValue()) }}">
                                 @if ($setting->getMedia('setting_asset')->isNotEmpty())
                                     <div class="mt-3 flex flex-wrap gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/70 p-2 dark:border-white/10 dark:bg-slate-950/30">
                                         @foreach ($setting->getMedia('setting_asset') as $media)
-                                            <img src="{{ $media->getUrl() }}" alt="{{ $setting->label }}" class="h-28 w-40 rounded-xl object-cover">
+                                            <img src="{{ App\Support\MediaUrl::fromMedia($media) }}" alt="{{ $setting->label }}" class="h-28 w-40 rounded-xl object-cover">
                                         @endforeach
                                     </div>
                                 @endif

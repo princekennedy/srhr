@@ -22,20 +22,25 @@ class EnsureCmsAccess
         }
 
         $routeName = $request->route()?->getName();
+
+        if ($routeName !== null && Str::is([
+            'cms.contents.create',
+            'cms.contents.store',
+            'cms.contents.edit',
+            'cms.contents.update',
+            'cms.contents.destroy',
+        ], $routeName)) {
+            abort_if(
+                ! $user->hasCmsPermission('cms.manage.contents')
+                && ! $user->hasCmsPermission('cms.manage.categories'),
+                Response::HTTP_FORBIDDEN,
+            );
+
+            return $next($request);
+        }
+
         $requiredPermission = $routeName === null ? null : match (true) {
             Str::is([
-                'cms.categories.create',
-                'cms.categories.store',
-                'cms.categories.edit',
-                'cms.categories.update',
-                'cms.categories.destroy',
-            ], $routeName) => 'cms.manage.categories',
-            Str::is([
-                'cms.contents.create',
-                'cms.contents.store',
-                'cms.contents.edit',
-                'cms.contents.update',
-                'cms.contents.destroy',
             ], $routeName) => 'cms.manage.contents',
             Str::is([
                 'cms.sliders.create',

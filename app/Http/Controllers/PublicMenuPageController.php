@@ -3,8 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Content;
-use App\Models\ContentCategory;
-use App\Models\MenuItem;
+use App\Models\Menu;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -13,11 +12,11 @@ class PublicMenuPageController extends Controller
 {
     public function show(string $menuItemName): View
     {
-        $item = MenuItem::query()
+        $item = Menu::query()->items()
             ->where('is_active', true)
             ->whereIn('visibility', $this->allowedVisibilities())
             ->get()
-            ->first(fn (MenuItem $candidate): bool => $candidate->publicPageSlug() === $menuItemName);
+            ->first(fn (Menu $candidate): bool => $candidate->publicPageSlug() === $menuItemName);
 
         abort_if($item === null, 404);
 
@@ -33,16 +32,16 @@ class PublicMenuPageController extends Controller
     }
 
     /**
-     * @return array{0: Collection<int, ContentCategory>, 1: Collection<int, Content>, 2: array<string, mixed>}
+    * @return array{0: Collection<int, Content>, 1: Collection<int, Content>, 2: array<string, mixed>}
      */
-    private function resolvePageData(MenuItem $item): array
+    private function resolvePageData(Menu $item): array
     {
         $reference = trim((string) $item->target_reference);
         $categoryIds = $this->referenceIds($reference, 'category');
         $contentIds = $this->referenceIds($reference, 'content');
         $allowedContentVisibilities = $this->allowedContentVisibilities();
 
-        $categories = ContentCategory::query()
+        $categories = Content::query()->categories()
             ->with([
                 'contents' => fn ($query) => $query
                     ->with(['category', 'blocks' => fn ($blockQuery) => $blockQuery->where('is_active', true)->orderBy('sort_order'), 'media'])
@@ -50,14 +49,14 @@ class PublicMenuPageController extends Controller
                     ->whereIn('visibility', $allowedContentVisibilities)
                     ->latest('published_at'),
             ])
-            ->where('menu_item_id', $item->getKey())
+                    ->where('menu_id', $item->getKey())
             ->where('is_active', true)
             ->orderBy('sort_order')
-            ->orderBy('name')
+                    ->orderBy('title')
             ->get();
 
         if ($categoryIds->isNotEmpty()) {
-            $referencedCategories = ContentCategory::query()
+            $referencedCategories = Content::query()->categories()
                 ->with([
                     'contents' => fn ($query) => $query
                         ->with(['category', 'blocks' => fn ($blockQuery) => $blockQuery->where('is_active', true)->orderBy('sort_order'), 'media'])
@@ -76,7 +75,7 @@ class PublicMenuPageController extends Controller
         }
 
         $categoryContentIds = $categories
-            ->flatMap(fn (ContentCategory $category): Collection => $category->contents->pluck('id'))
+            ->flatMap(fn (Content $category): Collection => $category->contents->pluck('id'))
             ->unique()
             ->values();
 
@@ -111,11 +110,11 @@ class PublicMenuPageController extends Controller
     }
 
     /**
-     * @param Collection<int, ContentCategory> $categories
+    * @param Collection<int, Content> $categories
      * @param Collection<int, Content> $contents
      * @return array<string, string>
      */
-    private function pageContext(MenuItem $item, Collection $categories, Collection $contents): array
+    private function pageContext(Menu $item, Collection $categories, Collection $contents): array
     {
         if ($categories->isNotEmpty() && $contents->isNotEmpty()) {
             return [
@@ -156,7 +155,7 @@ class PublicMenuPageController extends Controller
      */
     private function allowedVisibilities(): array
     {
-        return auth()->check() ? MenuItem::VISIBILITY_OPTIONS : ['public'];
+        return auth()->check() ? Menu::VISIBILITY_OPTIONS : ['public'];
     }
 
     /**

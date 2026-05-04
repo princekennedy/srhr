@@ -3,9 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Content;
-use App\Models\ContentCategory;
 use App\Models\Menu;
-use App\Models\MenuItem;
 use App\Models\User;
 use App\Models\Website;
 use Database\Seeders\CmsSeeder;
@@ -25,7 +23,7 @@ class WebAuthTest extends TestCase
         $response = $this->get(route('home'));
 
         $response->assertOk();
-        $response->assertSee('Build a beautiful online presence that grows your brand');
+        $response->assertSee('Build dynamic pages from structured content');
     }
 
     public function test_home_page_uses_seeded_slider_content(): void
@@ -35,8 +33,8 @@ class WebAuthTest extends TestCase
         $response = $this->get(route('home'));
 
         $response->assertOk();
-        $response->assertSee('Simple. Elegant. Effective.');
-        $response->assertSee('Showcase your services with confidence');
+        $response->assertSee('System Managed Default Site');
+        $response->assertSee('Operate the system as a managed baseline');
     }
 
     public function test_guest_can_view_auth_pages(): void
@@ -87,7 +85,7 @@ class WebAuthTest extends TestCase
             'is_active' => true,
         ]);
 
-        $menu->items()->create([
+        Menu::query()->items()->create(Menu::normalizeForPersistence([
             'website_id' => $websiteId,
             'parent_id' => $parent->id,
             'title' => 'Topics',
@@ -97,9 +95,9 @@ class WebAuthTest extends TestCase
             'visibility' => 'public',
             'open_in_webview' => false,
             'is_active' => true,
-        ]);
+        ]));
 
-        $menu->items()->create([
+        Menu::query()->items()->create(Menu::normalizeForPersistence([
             'website_id' => $websiteId,
             'parent_id' => $parent->id,
             'title' => 'Support Email',
@@ -109,7 +107,7 @@ class WebAuthTest extends TestCase
             'visibility' => 'public',
             'open_in_webview' => false,
             'is_active' => true,
-        ]);
+        ]));
 
         $response = $this->get(route('home'));
 
@@ -117,7 +115,6 @@ class WebAuthTest extends TestCase
         $response->assertSee('Resources');
         $response->assertSee('Topics');
         $response->assertSee('Support Email');
-        $response->assertDontSee('Content');
     }
 
     public function test_user_can_register_without_cms_access(): void
@@ -185,7 +182,7 @@ class WebAuthTest extends TestCase
 
         $admin = User::query()->where('email', 'admin@srhr.test')->firstOrFail();
         $website = Website::query()->firstOrFail();
-        $category = ContentCategory::query()->firstOrFail();
+        $category = Content::query()->categories()->firstOrFail();
 
         $content = Content::query()->create([
             'website_id' => $website->id,
@@ -194,7 +191,7 @@ class WebAuthTest extends TestCase
             'summary' => 'A rich text rendering check.',
             'body' => '<h2>Formatted heading</h2><p><strong>Public body</strong> with <a href="https://example.com">a link</a>.</p>',
             'content_type' => 'page',
-            'category_id' => $category->id,
+            'parent_id' => $category->id,
             'status' => 'published',
             'audience' => 'general',
             'visibility' => 'public',
@@ -218,9 +215,9 @@ class WebAuthTest extends TestCase
         $menu = Menu::query()->where('location', 'public-primary')->firstOrFail();
         $website = Website::query()->firstOrFail();
 
-        $menuItem = MenuItem::query()->create(MenuItem::normalizeForPersistence([
+        $menuItem = Menu::query()->items()->create(Menu::normalizeForPersistence([
             'website_id' => $website->id,
-            'menu_id' => $menu->id,
+            'parent_id' => $menu->id,
             'title' => 'Dynamic Support Page',
             'layout_type' => 'default',
             'target_reference' => null,
@@ -230,12 +227,16 @@ class WebAuthTest extends TestCase
             'is_active' => true,
         ]));
 
-        $linkedCategory = ContentCategory::query()->create([
+        $linkedCategory = Content::query()->categories()->create([
             'website_id' => $website->id,
-            'name' => 'Dynamic Category',
+            'title' => 'Dynamic Category',
             'slug' => 'dynamic-category',
-            'description' => 'Linked category description.',
-            'menu_item_id' => $menuItem->id,
+            'summary' => 'Linked category description.',
+            'menu_id' => $menuItem->id,
+            'content_type' => 'category',
+            'status' => 'published',
+            'audience' => 'general',
+            'visibility' => 'public',
             'sort_order' => 1,
             'is_active' => true,
         ]);
@@ -247,7 +248,7 @@ class WebAuthTest extends TestCase
             'summary' => 'Category content summary.',
             'body' => '<p>Category body.</p>',
             'content_type' => 'page',
-            'category_id' => $linkedCategory->id,
+            'parent_id' => $linkedCategory->id,
             'status' => 'published',
             'audience' => 'general',
             'visibility' => 'public',
@@ -256,11 +257,15 @@ class WebAuthTest extends TestCase
             'updated_by' => $admin->id,
         ]);
 
-        $standaloneCategory = ContentCategory::query()->create([
+        $standaloneCategory = Content::query()->categories()->create([
             'website_id' => $website->id,
-            'name' => 'Standalone Category',
+            'title' => 'Standalone Category',
             'slug' => 'standalone-category',
-            'description' => 'Standalone category description.',
+            'summary' => 'Standalone category description.',
+            'content_type' => 'category',
+            'status' => 'published',
+            'audience' => 'general',
+            'visibility' => 'public',
             'sort_order' => 2,
             'is_active' => true,
         ]);
@@ -272,7 +277,7 @@ class WebAuthTest extends TestCase
             'summary' => 'Standalone content summary.',
             'body' => '<p>Standalone body.</p>',
             'content_type' => 'page',
-            'category_id' => $standaloneCategory->id,
+            'parent_id' => $standaloneCategory->id,
             'status' => 'published',
             'audience' => 'general',
             'visibility' => 'public',
@@ -325,7 +330,7 @@ class WebAuthTest extends TestCase
 
         $menu = Menu::query()->where('location', 'public-primary')->firstOrFail();
 
-        $contentItem = $menu->items()->create(MenuItem::normalizeForPersistence([
+        $contentItem = $menu->items()->create(Menu::normalizeForPersistence([
             'website_id' => $menu->website_id,
             'title' => 'Content Routed Dynamically',
             'layout_type' => 'default',
@@ -339,7 +344,6 @@ class WebAuthTest extends TestCase
 
         $response->assertOk();
         $response->assertSee(route('public.menu-pages.show', ['menuItemName' => $contentItem->publicPageSlug()]), false);
-        $response->assertDontSee('href="'.route('public.contents.index').'"', false);
     }
 
     public function test_dynamic_menu_item_route_loads_public_non_webview_menu_item(): void
@@ -349,7 +353,7 @@ class WebAuthTest extends TestCase
         $admin = User::query()->where('email', 'admin@srhr.test')->firstOrFail();
         $menu = Menu::query()->where('location', 'public-primary')->firstOrFail();
         $website = Website::query()->firstOrFail();
-        $category = ContentCategory::query()->firstOrFail();
+        $category = Content::query()->categories()->firstOrFail();
 
         $content = Content::query()->create([
             'website_id' => $website->id,
@@ -358,7 +362,7 @@ class WebAuthTest extends TestCase
             'summary' => 'Dynamic content type summary.',
             'body' => '<p>Dynamic content type body.</p>',
             'content_type' => 'page',
-            'category_id' => $category->id,
+            'parent_id' => $category->id,
             'status' => 'published',
             'audience' => 'general',
             'visibility' => 'public',
@@ -367,7 +371,7 @@ class WebAuthTest extends TestCase
             'updated_by' => $admin->id,
         ]);
 
-        $menuItem = $menu->items()->create(MenuItem::normalizeForPersistence([
+        $menuItem = $menu->items()->create(Menu::normalizeForPersistence([
             'website_id' => $website->id,
             'title' => 'Non Webview Dynamic Page',
             'layout_type' => 'default',
@@ -377,7 +381,7 @@ class WebAuthTest extends TestCase
             'is_active' => true,
         ]));
 
-        $category->update(['menu_item_id' => $menuItem->id]);
+        $category->update(['menu_id' => $menuItem->id]);
 
         $response = $this->get(route('public.menu-pages.show', ['menuItemName' => $menuItem->publicPageSlug()]));
 

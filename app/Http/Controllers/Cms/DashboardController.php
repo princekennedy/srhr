@@ -5,9 +5,7 @@ namespace App\Http\Controllers\Cms;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\Content;
-use App\Models\ContentCategory;
 use App\Models\Menu;
-use App\Models\MenuItem;
 use App\Models\Slider;
 use App\Models\Website;
 use Illuminate\Contracts\View\View;
@@ -19,11 +17,11 @@ class DashboardController extends Controller
         return view('cms.dashboard', [
             'stats' => [
                 'websites' => Website::count(),
-                'categories' => ContentCategory::count(),
+                'categories' => Content::query()->categories()->count(),
                 'contents' => Content::count(),
                 'sliders' => Slider::count(),
                 'menus' => Menu::count(),
-                'menuItems' => MenuItem::count(),
+                'menuItems' => Menu::query()->items()->count(),
                 'settings' => AppSetting::count(),
             ],
             'recentContents' => Content::query()

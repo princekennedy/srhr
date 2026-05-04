@@ -9,9 +9,7 @@ use App\Enums\MenuLayoutType;
 use App\Enums\SliderLayoutType;
 use App\Http\Controllers\Controller;
 use App\Models\Content;
-use App\Models\ContentCategory;
 use App\Models\Menu;
-use App\Models\MenuItem;
 use App\Models\Slider;
 use App\Support\DesignLayouts;
 use Illuminate\Support\Collection;
@@ -73,11 +71,11 @@ class LayoutPreviewController extends Controller
     private function sampleData(string $section): array
     {
         return match ($section) {
-            'content'            => $this->contentData(),
-            'content-categories' => $this->categoryData(),
-            'menu-items'         => $this->menuItemData(),
-            'sliders'            => $this->sliderData(),
-            default              => [],
+            'content' => $this->contentData(),
+            'categories' => $this->categoryData(),
+            'navigation' => $this->menuItemData(),
+            'sliders' => $this->sliderData(),
+            default => [],
         };
     }
 
@@ -97,7 +95,7 @@ class LayoutPreviewController extends Controller
 
         if ($request->integer('category_id') > 0) {
             return [
-                ContentCategory::query()->findOrFail($request->integer('category_id')),
+                Content::query()->categories()->findOrFail($request->integer('category_id')),
                 CategoryLayoutType::values(),
                 'cms.manage.categories',
                 'Category',
@@ -115,7 +113,7 @@ class LayoutPreviewController extends Controller
 
         if ($request->integer('menu_item_id') > 0) {
             return [
-                MenuItem::query()->findOrFail($request->integer('menu_item_id')),
+                Menu::query()->items()->findOrFail($request->integer('menu_item_id')),
                 MenuItemLayoutType::values(),
                 'cms.manage.menus',
                 'Menu item',
@@ -169,12 +167,12 @@ class LayoutPreviewController extends Controller
     {
         $categoryId = request()->integer('category_id');
 
-        $category = ContentCategory::query()
+        $category = Content::query()->categories()
             ->when($categoryId > 0, fn ($query) => $query->whereKey($categoryId))
             ->where('is_active', true)
-            ->first() ?? new ContentCategory([
+            ->first() ?? new Content([
                 'name'        => 'Sample Category',
-                'description' => 'A description of this topic category and the published content it contains.',
+                'description' => 'A description of this content category and the published content it contains.',
             ]);
 
         $contents = $category->exists
@@ -206,7 +204,7 @@ class LayoutPreviewController extends Controller
             return $this->menuData($menuId);
         }
 
-        $menuItemQuery = MenuItem::query();
+        $menuItemQuery = Menu::query()->items();
 
         if ($menuItemId > 0) {
             // In CMS preview, allow previewing the selected record even if inactive.
@@ -215,7 +213,7 @@ class LayoutPreviewController extends Controller
             $menuItemQuery->where('is_active', true);
         }
 
-        $menuItem = $menuItemQuery->first() ?? new MenuItem(['title' => 'Sample Menu Page']);
+        $menuItem = $menuItemQuery->first() ?? new Menu(['title' => 'Sample Menu Page', 'parent_id' => 1]);
 
         [$pageCategories, $pageContents, $pageContext] = $this->resolveMenuItemPayload($menuItem);
 
@@ -233,8 +231,8 @@ class LayoutPreviewController extends Controller
             ->first();
 
         if ($menu === null || $menu->items->isEmpty()) {
-            $menuItem = new MenuItem(['title' => 'Menu Preview']);
-            $pageCategories = ContentCategory::query()
+            $menuItem = new Menu(['title' => 'Menu Preview', 'parent_id' => 1]);
+            $pageCategories = Content::query()->categories()
                 ->with(['contents' => fn ($q) => $q->where('status', 'published')->limit(4)])
                 ->where('is_active', true)
                 ->limit(2)
@@ -266,16 +264,17 @@ class LayoutPreviewController extends Controller
         $pageCategories = $allCategories->unique('id')->values();
         $pageContents = $allContents->unique('id')->values();
 
-        $menuItem = new MenuItem([
-            'title' => $menu->name,
+        $menuItem = new Menu([
+            'title' => $menu->title,
+            'parent_id' => $primary?->id ?? 1,
         ]);
 
         $pageContext = [
-            'eyebrow' => 'Menu: '.$menu->name,
+            'eyebrow' => 'Menu: '.$menu->title,
             'description' => 'Preview built from all active menu items in this menu.',
         ];
 
-        if ($primary instanceof MenuItem) {
+        if ($primary?->isItem()) {
             $menuItem->title = $primary->title;
         }
 
@@ -283,9 +282,9 @@ class LayoutPreviewController extends Controller
     }
 
     /**
-     * @return array{0: Collection<int, ContentCategory>, 1: Collection<int, Content>, 2: array<string, string>}
+    * @return array{0: Collection<int, Content>, 1: Collection<int, Content>, 2: array<string, string>}
      */
-    private function resolveMenuItemPayload(MenuItem $item): array
+    private function resolveMenuItemPayload(Menu $item): array
     {
         [$pageCategories, $pageContents] = $this->resolveReferencesFromTargetReference((string) $item->target_reference, $item->getKey());
 
@@ -300,14 +299,14 @@ class LayoutPreviewController extends Controller
     }
 
     /**
-     * @return array{0: Collection<int, ContentCategory>, 1: Collection<int, Content>}
+    * @return array{0: Collection<int, Content>, 1: Collection<int, Content>}
      */
     private function resolveReferencesFromTargetReference(string $reference, ?int $menuItemId = null): array
     {
         $categoryIds = $this->referenceIds($reference, 'category');
         $contentIds = $this->referenceIds($reference, 'content');
 
-        $categories = ContentCategory::query()
+        $categories = Content::query()->categories()
             ->with([
                 'contents' => fn ($query) => $query
                     ->with(['category', 'blocks' => fn ($blockQuery) => $blockQuery->where('is_active', true)->orderBy('sort_order'), 'media'])
@@ -316,7 +315,7 @@ class LayoutPreviewController extends Controller
             ])
             ->where(function ($query) use ($menuItemId, $categoryIds): void {
                 if ($menuItemId !== null) {
-                    $query->where('menu_item_id', $menuItemId);
+                    $query->where('menu_id', $menuItemId);
                 }
 
                 if ($categoryIds->isNotEmpty()) {
@@ -324,11 +323,11 @@ class LayoutPreviewController extends Controller
                 }
             })
             ->orderBy('sort_order')
-            ->orderBy('name')
+            ->orderBy('title')
             ->get();
 
         $categoryContentIds = $categories
-            ->flatMap(fn (ContentCategory $category): Collection => $category->contents->pluck('id'))
+            ->flatMap(fn (Content $category): Collection => $category->contents->pluck('id'))
             ->unique()
             ->values();
 
@@ -368,31 +367,17 @@ class LayoutPreviewController extends Controller
         $sliderId = request()->integer('slider_id');
 
         $sliders = Slider::query()
-            ->with('media')
+            ->with(['media', 'items.media'])
             ->when($sliderId > 0, fn ($query) => $query->whereKey($sliderId))
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->limit(3)
             ->get();
 
-        $slides = $sliders->map(fn (Slider $slider): array => [
-            'title'   => $slider->title,
-            'kicker'  => $slider->kicker,
-            'desc'    => $slider->caption,
-            'image'   => $slider->imageUrl() ?: 'https://placehold.co/1200x600/1e293b/94a3b8?text=Slide+Preview',
-            'buttons' => array_values(array_filter([
-                $slider->primary_button_text ? [
-                    'text'  => $slider->primary_button_text,
-                    'link'  => $slider->primary_button_link ?? '#',
-                    'class' => 'bg-indigo-600 hover:bg-indigo-700',
-                ] : null,
-                $slider->secondary_button_text ? [
-                    'text'  => $slider->secondary_button_text,
-                    'link'  => $slider->secondary_button_link ?? '#',
-                    'class' => 'bg-white/15 hover:bg-white/25 backdrop-blur',
-                ] : null,
-            ])),
-        ])->values()->all();
+        $slides = $sliders
+            ->flatMap(fn (Slider $slider) => $slider->slidesPayload())
+            ->values()
+            ->all();
 
         return compact('slides');
     }

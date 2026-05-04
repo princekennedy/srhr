@@ -54,7 +54,9 @@ class Website extends Model
 
     public function categories(): HasMany
     {
-        return $this->hasMany(ContentCategory::class);
+        return $this->hasMany(Content::class)
+            ->withoutGlobalScope('child-content')
+            ->whereNull('parent_id');
     }
 
     public function contents(): HasMany
@@ -81,7 +83,7 @@ class Website extends Model
             ],
             [
                 'website_id' => $this->id,
-                'name' => 'Home',
+                'title' => 'Home',
                 'description' => 'Default landing page for this website workspace.',
                 'sort_order' => 1,
                 'layout_type' => DesignLayoutType::Default->value,

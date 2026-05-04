@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToWebsite;
+use App\Support\MediaUrl;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\MediaLibrary\HasMedia;
@@ -41,6 +42,35 @@ class AppSetting extends Model implements HasMedia
 
     public function registerMediaConversions(?Media $media = null): void
     {
+    }
+
+    public function resolvedValue(): mixed
+    {
+        return match ($this->input_type) {
+            'upload' => $this->settingAssetUrl() ?? MediaUrl::normalize($this->value),
+            'upload_multiple' => $this->settingAssetUrls() !== []
+                ? $this->settingAssetUrls()
+                : collect(json_decode((string) $this->value, true) ?: [])
+                    ->map(fn (mixed $url): ?string => is_string($url) ? MediaUrl::normalize($url) : null)
+                    ->filter()
+                    ->values()
+                    ->all(),
+            default => $this->value,
+        };
+    }
+
+    public function settingAssetUrl(): ?string
+    {
+        return MediaUrl::first($this, 'setting_asset');
+    }
+
+    public function settingAssetUrls(): array
+    {
+        return $this->getMedia('setting_asset')
+            ->map(fn (Media $media): ?string => MediaUrl::fromMedia($media))
+            ->filter()
+            ->values()
+            ->all();
     }
 
     public static function seedDefaultsForWebsite(Website $website): void

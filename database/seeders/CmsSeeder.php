@@ -5,10 +5,9 @@ namespace Database\Seeders;
 use App\Models\AppSetting;
 use App\Models\Content;
 use App\Models\ContentBlock;
-use App\Models\ContentCategory;
 use App\Models\Menu;
-use App\Models\MenuItem;
 use App\Models\Slider;
+use App\Models\SliderItem;
 use App\Models\User;
 use App\Models\Website;
 use Illuminate\Database\Seeder;
@@ -129,10 +128,10 @@ class CmsSeeder extends Seeder
         }
 
         // Reset seed-driven website data so reseeding reflects the latest documentation structure.
-        MenuItem::query()->where('website_id', $website->id)->delete();
-        Menu::query()->where('website_id', $website->id)->delete();
         Content::query()->where('website_id', $website->id)->delete();
-        ContentCategory::query()->where('website_id', $website->id)->delete();
+        Content::query()->categories()->where('website_id', $website->id)->delete();
+        Menu::query()->items()->where('website_id', $website->id)->delete();
+        Menu::query()->where('website_id', $website->id)->delete();
         Slider::query()->where('website_id', $website->id)->get()->each(function (Slider $slider): void {
             $slider->clearMediaCollection('slide_image');
             $slider->delete();
@@ -160,9 +159,18 @@ class CmsSeeder extends Seeder
                 'sort_order' => 4,
             ],
         ])->mapWithKeys(function (array $category) use ($website) {
-            $model = ContentCategory::query()->updateOrCreate(
+            $model = Content::query()->categories()->updateOrCreate(
                 ['website_id' => $website->id, 'slug' => str($category['name'])->slug()->value()],
-                [...$category, 'website_id' => $website->id, 'is_active' => true],
+                [
+                    ...$category,
+                    'website_id' => $website->id,
+                    'content_type' => 'category',
+                    'status' => 'published',
+                    'audience' => 'general',
+                    'visibility' => 'public',
+                    'is_active' => true,
+                    'published_at' => Carbon::now(),
+                ],
             );
 
             return [$category['name'] => $model];
@@ -260,10 +268,11 @@ class CmsSeeder extends Seeder
                     'summary' => $entry['summary'],
                     'body' => $entry['body'],
                     'content_type' => $entry['content_type'],
-                    'category_id' => $category->id,
+                    'parent_id' => $category->id,
                     'status' => 'published',
                     'audience' => $entry['audience'],
                     'visibility' => 'public',
+                    'is_active' => true,
                     'published_at' => Carbon::now(),
                     'created_by' => $admin->id,
                     'updated_by' => $admin->id,
@@ -326,15 +335,34 @@ class CmsSeeder extends Seeder
             ],
         ];
 
+        $homeSlider = Slider::query()->updateOrCreate(
+            ['website_id' => $website->id, 'slug' => 'home-hero-slider'],
+            [
+                'website_id' => $website->id,
+                'title' => 'Home Hero Slider',
+                'kicker' => 'Dynamic Website Experience',
+                'layout_type' => 'default',
+                'caption' => 'Seeded homepage slider for the system managed site.',
+                'sort_order' => 1,
+                'is_active' => true,
+                'created_by' => $admin->id,
+                'updated_by' => $admin->id,
+            ],
+        );
+
+        $homeSlider->clearMediaCollection('slide_image');
+
         foreach ($sliderRecords as $sliderData) {
-            $slider = Slider::query()->updateOrCreate(
-                ['website_id' => $website->id, 'slug' => str($sliderData['title'])->slug()->value()],
+            $item = SliderItem::query()->updateOrCreate(
+                ['slider_id' => $homeSlider->id, 'website_id' => $website->id, 'slug' => str($sliderData['title'])->slug()->value()],
                 [
+                    'slider_id' => $homeSlider->id,
                     'website_id' => $website->id,
                     'title' => $sliderData['title'],
+                    'slug' => str($sliderData['title'])->slug()->value(),
                     'kicker' => $sliderData['kicker'],
-                    'layout_type' => 'default',
                     'caption' => $sliderData['caption'],
+                    'layout_type' => 'default',
                     'primary_button_text' => $sliderData['primary_button_text'],
                     'primary_button_link' => $sliderData['primary_button_link'],
                     'secondary_button_text' => $sliderData['secondary_button_text'],
@@ -346,10 +374,9 @@ class CmsSeeder extends Seeder
                 ],
             );
 
-            // Always replace the slide image so reseeding stays consistent.
-            $slider->clearMediaCollection('slide_image');
+            $item->clearMediaCollection('slide_image');
             if (is_file($sliderData['asset'])) {
-                $slider->addMedia($sliderData['asset'])
+                $item->addMedia($sliderData['asset'])
                     ->preservingOriginal()
                     ->toMediaCollection('slide_image');
             }
@@ -447,11 +474,12 @@ class CmsSeeder extends Seeder
                 ['website_id' => $website->id, 'slug' => $menuData['slug']],
                 [
                     'website_id' => $website->id,
-                    'name' => $menuData['name'],
+                    'title' => $menuData['name'],
                     'description' => $menuData['description'],
                     'sort_order' => (int) ($menuData['sort_order'] ?? 0),
                     'layout_type' => 'default',
                     'location' => 'public-primary',
+                    'slider_id' => $menuData['slug'] === 'home' ? $homeSlider?->id : null,
                     'visibility' => 'public',
                     'is_active' => true,
                 ],
@@ -464,8 +492,9 @@ class CmsSeeder extends Seeder
 
                 $menu->items()->updateOrCreate(
                     ['website_id' => $website->id, 'title' => $item['title']],
-                    MenuItem::normalizeForPersistence([
+                    Menu::normalizeForPersistence([
                         'website_id' => $website->id,
+                        'slug' => str($item['title'])->slug()->value(),
                         'layout_type' => $item['layout_type'] ?? 'default',
                         'target_reference' => $item['target_reference'] ?? null,
                         'route' => $item['route'] ?? $route,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Cms;
 
+use App\Enums\CategoryLayoutType;
 use App\Enums\ContentLayoutType;
 use App\Models\Content;
 use App\Support\CurrentWebsite;
@@ -28,6 +29,19 @@ class ContentRequest extends FormRequest
         $contentId = $this->route('content')?->id;
         $websiteId = app(CurrentWebsite::class)->id();
 
+        if ($this->isCategoryRequest()) {
+            return [
+                'menu_item_id' => ['nullable', Rule::exists('menus', 'id')->where(fn ($query) => $query->where('website_id', $websiteId)->whereNotNull('parent_id'))],
+                'name' => ['required', 'string', 'max:160'],
+                'slug' => ['nullable', 'string', 'max:180', Rule::unique('contents', 'slug')->where(fn ($query) => $query->where('website_id', $websiteId))->ignore($contentId)],
+                'layout_type' => ['required', Rule::in(CategoryLayoutType::values())],
+                'description' => ['nullable', 'string'],
+                'visibility' => ['required', Rule::in(Content::VISIBILITY_OPTIONS)],
+                'sort_order' => ['nullable', 'integer', 'min:0'],
+                'is_active' => ['nullable', 'boolean'],
+            ];
+        }
+
         return [
             'title' => ['required', 'string', 'max:160'],
             'slug' => ['nullable', 'string', 'max:180', Rule::unique('contents', 'slug')->where(fn ($query) => $query->where('website_id', $websiteId))->ignore($contentId)],
@@ -35,7 +49,7 @@ class ContentRequest extends FormRequest
             'summary' => ['nullable', 'string'],
             'body' => ['nullable', 'string'],
             'content_type' => ['required', Rule::in(Content::TYPE_OPTIONS)],
-            'category_id' => ['nullable', 'exists:content_categories,id'],
+            'category_id' => ['required', Rule::exists('contents', 'id')->where(fn ($query) => $query->where('website_id', $websiteId)->whereNull('parent_id'))],
             'status' => ['required', Rule::in(Content::STATUS_OPTIONS)],
             'audience' => ['required', Rule::in(Content::AUDIENCE_OPTIONS)],
             'visibility' => ['required', Rule::in(Content::VISIBILITY_OPTIONS)],
@@ -43,7 +57,20 @@ class ContentRequest extends FormRequest
             'featured_image_upload' => ['nullable', 'image', 'max:5120'],
             'attachments' => ['nullable', 'array'],
             'attachments.*' => ['file', 'max:10240'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
             'published_at' => ['nullable', 'date'],
         ];
+    }
+
+    public function isCategoryRequest(): bool
+    {
+        $content = $this->route('content');
+
+        if ($content instanceof Content) {
+            return $content->isCategory();
+        }
+
+        return $this->string('kind')->lower()->value() === 'category';
     }
 }

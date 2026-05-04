@@ -24,12 +24,14 @@ class MenuItemRequest extends FormRequest
      */
     public function rules(): array
     {
+        $itemId = $this->route('item')?->id;
         $websiteId = app(CurrentWebsite::class)->id();
 
         return [
-            'parent_id' => ['nullable', Rule::exists('menu_items', 'id')->where(fn ($query) => $query->where('website_id', $websiteId))],
+            'parent_id' => ['nullable', Rule::exists('menus', 'id')->where(fn ($query) => $query->where('website_id', $websiteId)->whereNotNull('parent_id'))],
             'title' => ['required', 'string', 'max:120'],
             'layout_type' => ['required', Rule::in(MenuItemLayoutType::values())],
+            'slug' => ['nullable', 'string', 'max:140', Rule::unique('menus', 'slug')->where(fn ($query) => $query->where('website_id', $websiteId))->ignore($itemId)],
             'target_reference' => ['nullable', 'string', 'max:255'],
             'route' => ['nullable', 'string', 'max:255'],
             'icon' => ['nullable', 'string', 'max:80'],

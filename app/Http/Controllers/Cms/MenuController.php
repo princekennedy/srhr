@@ -6,6 +6,7 @@ use App\Enums\MenuLayoutType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cms\MenuRequest;
 use App\Models\Menu;
+use App\Models\Slider;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 
@@ -15,8 +16,10 @@ class MenuController extends Controller
     {
         return view('cms.menus.index', [
             'menus' => Menu::query()
+                ->with('slider')
                 ->withCount('items')
-                ->orderBy('name')
+                ->orderBy('sort_order')
+                ->orderBy('title')
                 ->get(),
         ]);
     }
@@ -27,6 +30,7 @@ class MenuController extends Controller
             'menu' => new Menu(),
             'visibilityOptions' => Menu::VISIBILITY_OPTIONS,
             'layoutOptions' => MenuLayoutType::options(),
+            'sliderOptions' => Slider::query()->where('is_active', true)->orderBy('sort_order')->orderBy('title')->get(['id', 'title']),
         ]);
     }
 
@@ -38,23 +42,31 @@ class MenuController extends Controller
         ]);
 
         return redirect()
-            ->route('cms.menus.show', $menu)
+            ->route('cms.menus.edit', $menu)
             ->with('status', 'Menu created. Add items to define the app navigation.');
     }
 
-    public function show(Menu $menu): View
+    public function show(Menu $menu): RedirectResponse
     {
-        return view('cms.menus.show', [
-            'menu' => $menu->load(['items.parent']),
-        ]);
+        return redirect()->route('cms.menus.edit', $menu);
     }
 
     public function edit(Menu $menu): View
     {
+        $menuItems = Menu::query()->items()
+            ->with('parent')
+            ->orderBy('sort_order')
+            ->orderBy('title')
+            ->get()
+            ->filter(fn (Menu $item) => $item->belongsToMenu($menu))
+            ->values();
+
         return view('cms.menus.edit', [
             'menu' => $menu,
+            'menuItems' => $menuItems,
             'visibilityOptions' => Menu::VISIBILITY_OPTIONS,
             'layoutOptions' => MenuLayoutType::options(),
+            'sliderOptions' => Slider::query()->where('is_active', true)->orderBy('sort_order')->orderBy('title')->get(['id', 'title']),
         ]);
     }
 
@@ -66,7 +78,7 @@ class MenuController extends Controller
         ]);
 
         return redirect()
-            ->route('cms.menus.show', $menu)
+            ->route('cms.menus.edit', $menu)
             ->with('status', 'Menu updated.');
     }
 

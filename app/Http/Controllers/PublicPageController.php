@@ -3,9 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Content;
-use App\Models\ContentCategory;
 use App\Models\Menu;
-use App\Models\MenuItem;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -19,7 +17,7 @@ class PublicPageController extends Controller
             ->first();
 
         if ($menu === null) {
-            $menu = $this->publicMenuQuery()->orderBy('sort_order')->orderBy('name')->first();
+            $menu = $this->publicMenuQuery()->orderBy('sort_order')->orderBy('title')->first();
         }
 
         abort_if($menu === null, 404);
@@ -41,11 +39,14 @@ class PublicPageController extends Controller
 
     private function renderPage(Menu $menu): View
     {
+        $menu->loadMissing(['slider.media', 'slider.items.media']);
+
         [$primaryContent, $pageContents, $pageCategories] = $this->resolvePageData($menu);
 
         return view('page', [
             'pageTemplate' => 'menu-show',
             'menu' => $menu,
+            'menuSlider' => $menu->slider,
             'primaryContent' => $primaryContent,
             'pageContents' => $pageContents,
             'pageCategories' => $pageCategories,
@@ -53,7 +54,7 @@ class PublicPageController extends Controller
     }
 
     /**
-     * @return array{0: ?Content, 1: Collection<int, Content>, 2: Collection<int, ContentCategory>}
+    * @return array{0: ?Content, 1: Collection<int, Content>, 2: Collection<int, Content>}
      */
     private function resolvePageData(Menu $menu): array
     {
@@ -80,7 +81,7 @@ class PublicPageController extends Controller
 
         $pageCategories = $categoryIds->isEmpty()
             ? collect()
-            : ContentCategory::query()
+            : Content::query()->categories()
                 ->with([
                     'contents' => fn ($query) => $query
                         ->where('status', 'published')
@@ -90,7 +91,7 @@ class PublicPageController extends Controller
                 ->whereIn('id', $categoryIds)
                 ->where('is_active', true)
                 ->orderBy('sort_order')
-                ->orderBy('name')
+                ->orderBy('title')
                 ->get();
 
         $pageContents = $contentIds->isEmpty()
@@ -110,7 +111,7 @@ class PublicPageController extends Controller
             ->whereIn('visibility', $allowedContentVisibilities)
             ->where(function ($query) use ($menu): void {
                 $query->where('slug', $menu->slug)
-                    ->orWhere('title', $menu->name);
+                    ->orWhere('title', $menu->title);
             })
             ->latest('published_at')
             ->first();
@@ -143,7 +144,7 @@ class PublicPageController extends Controller
      */
     private function allowedMenuVisibilities(): array
     {
-        return auth()->check() ? MenuItem::VISIBILITY_OPTIONS : ['public'];
+        return auth()->check() ? Menu::VISIBILITY_OPTIONS : ['public'];
     }
 
     /**
@@ -157,10 +158,11 @@ class PublicPageController extends Controller
     private function publicMenuQuery()
     {
         return Menu::query()
+            ->with(['slider.media', 'slider.items.media'])
             ->where('location', 'public-primary')
             ->where('is_active', true)
             ->whereIn('visibility', $this->allowedMenuVisibilities())
             ->orderBy('sort_order')
-            ->orderBy('name');
+            ->orderBy('title');
     }
 }

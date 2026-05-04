@@ -3,9 +3,7 @@
 namespace App\Support;
 
 use App\Models\Content;
-use App\Models\ContentCategory;
 use App\Models\Menu;
-use App\Models\MenuItem;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -17,7 +15,7 @@ class PublicNavigation
 
     public function menus(string $location = 'public-primary'): Collection
     {
-        if (! Schema::hasTable('menus') || ! Schema::hasTable('menu_items')) {
+        if (! Schema::hasTable('menus')) {
             return collect();
         }
 
@@ -35,24 +33,13 @@ class PublicNavigation
             ->where('location', $location)
             ->where('is_active', true)
             ->whereIn('visibility', $allowedVisibilities)
-            ->with([
-                'items' => fn ($query) => $query
-                    ->withoutGlobalScope('website')
-                    ->where('website_id', $websiteId)
-                    ->where('is_active', true)
-                    ->whereIn('visibility', $allowedVisibilities)
-                    ->orderBy('sort_order')
-                    ->orderBy('title'),
-            ])
             ->orderBy('sort_order')
-            ->orderBy('name')
+            ->orderBy('title')
             ->get()
             ->map(function (Menu $menu): array {
                 $items = $menu->items
-                    ->whereNull('parent_id')
-                    ->sortBy('sort_order')
                     ->values()
-                    ->map(fn (MenuItem $item): array => $this->mapItem($item, $menu->items))
+                    ->map(fn (Menu $item): array => $this->mapItem($item))
                     ->filter(fn (array $item): bool => filled($item['href']) || collect($item['children'])->isNotEmpty())
                     ->values();
 
@@ -95,7 +82,7 @@ class PublicNavigation
 
     public function menu(string $location = 'public-primary'): ?Menu
     {
-        if (! Schema::hasTable('menus') || ! Schema::hasTable('menu_items')) {
+        if (! Schema::hasTable('menus')) {
             return null;
         }
 
@@ -113,15 +100,6 @@ class PublicNavigation
             ->where('location', $location)
             ->where('is_active', true)
             ->whereIn('visibility', $allowedVisibilities)
-            ->with([
-                'items' => fn ($query) => $query
-                    ->withoutGlobalScope('website')
-                    ->where('website_id', $websiteId)
-                    ->where('is_active', true)
-                    ->whereIn('visibility', $allowedVisibilities)
-                    ->orderBy('sort_order')
-                    ->orderBy('title'),
-            ])
             ->first();
     }
 
@@ -130,16 +108,18 @@ class PublicNavigation
      */
     private function allowedVisibilities(): array
     {
-        return auth()->check() ? MenuItem::VISIBILITY_OPTIONS : ['public'];
+        return auth()->check() ? Menu::VISIBILITY_OPTIONS : ['public'];
     }
 
-    private function mapItem(MenuItem $item, Collection $allItems): array
+    private function mapItem(Menu $item): array
     {
-        $children = $allItems
-            ->where('parent_id', $item->id)
-            ->sortBy('sort_order')
-            ->values()
-            ->map(fn (MenuItem $child): array => $this->mapItem($child, $allItems))
+        $children = $item->children()
+            ->where('is_active', true)
+            ->whereIn('visibility', $this->allowedVisibilities())
+            ->orderBy('sort_order')
+            ->orderBy('title')
+            ->get()
+            ->map(fn (Menu $child): array => $this->mapItem($child))
             ->filter(fn (array $child): bool => filled($child['href']) || collect($child['children'])->isNotEmpty())
             ->values();
 
@@ -189,7 +169,7 @@ class PublicNavigation
         return route('public.pages.show', $menu);
     }
 
-    private function resolveMenuItemUrl(MenuItem $item): ?string
+    private function resolveMenuItemUrl(Menu $item): ?string
     {
         if (filled($item->target_reference)) {
             if (str_starts_with((string) $item->target_reference, 'content:')) {
@@ -235,7 +215,7 @@ class PublicNavigation
 
     private function resolveCategoryTarget(?string $reference): ?string
     {
-        if (! Schema::hasTable('content_categories')) {
+        if (! Schema::hasTable('contents')) {
             return route('public.categories.index');
         }
 
@@ -245,7 +225,7 @@ class PublicNavigation
             return route('public.categories.index');
         }
 
-        $slug = ContentCategory::query()
+        $slug = Content::query()->categories()
             ->withoutGlobalScope('website')
             ->where('website_id', $this->websiteId())
             ->whereKey($id)
