@@ -55,15 +55,15 @@ if [ "${CACHE_LARAVEL_CONFIG:-true}" = "true" ]; then
     php artisan view:cache || true
 fi
 
-if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
-    if [ "${RUN_SEEDERS:-false}" = "true" ]; then
+if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
+    if [ "${RUN_SEEDERS:-true}" = "true" ]; then
         echo "[entrypoint] running php artisan migrate --seed --force"
         php artisan migrate --seed --force
     else
         echo "[entrypoint] running php artisan migrate --force"
         php artisan migrate --force
     fi
-elif [ "${RUN_SEEDERS:-false}" = "true" ]; then
+elif [ "${RUN_SEEDERS:-true}" = "true" ]; then
     echo "[entrypoint] running php artisan db:seed --force"
     php artisan db:seed --force
 fi

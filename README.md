@@ -28,7 +28,7 @@ Basic deployment flow:
 
 1. Optionally create a dedicated Docker env file such as `.env.docker` if you want to override the `DOCKER_*` values defined in `compose.yaml`.
 2. Start the stack with `docker compose up --build -d`.
-3. The `web` service will run `php artisan migrate --seed --force` automatically when both `DOCKER_RUN_MIGRATIONS=true` and `DOCKER_RUN_SEEDERS=true`.
+3. The image defaults to `php artisan migrate --seed --force` on startup. You can disable either step with `DOCKER_RUN_MIGRATIONS=false` or `DOCKER_RUN_SEEDERS=false`.
 4. The public app will be available on `http://localhost` or the port set by `DOCKER_WEB_PORT`.
 
 Notes:
@@ -37,12 +37,14 @@ Notes:
 - The Docker deployment stores SQLite in the named volume `sqlite_data` at `/var/lib/srhr/database.sqlite`.
 - The `web` image is self-contained and runs both `php-fpm` and `nginx`, so it does not depend on a separate `app` hostname at runtime.
 - The default Docker env now seeds baseline CMS/app data on startup, which is useful for first-run SQLite deployments.
+- The image itself now defaults `RUN_MIGRATIONS=true` and `RUN_SEEDERS=true`, so Dokploy deployments that run the Docker image directly behave the same as the compose stack.
 - The lightweight Docker defaults do not require Redis; sessions and cache use files, while the queue worker uses the database-backed queue tables created by migrations.
 - The sample Docker env enables `APP_DEBUG` and sends Laravel logs to both stderr and `storage/logs/laravel.log`, so container logs show the actual exception during debugging.
 - Uploaded media is persisted in the named Docker volume `storage_data`.
 - Static uploads are served by nginx through `/storage/`.
 - On container startup, the PHP entrypoint ensures the Laravel `public/storage` symlink exists by running `php artisan storage:link --force --no-interaction` when needed.
 - If `APP_KEY` is missing at runtime, the PHP entrypoint generates one before Laravel boots so the container does not fail with the encryption key error.
+- nginx now forwards Dokploy proxy headers into PHP and Laravel trusts those proxies, so generated Vite asset URLs keep the correct host and HTTPS scheme behind the Dokploy ingress.
 - The queue worker and scheduler run as separate containers using the same application image.
 - For first deployment, replace the sample `DOCKER_APP_KEY` with a real key.
 
