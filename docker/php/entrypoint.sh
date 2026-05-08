@@ -24,7 +24,7 @@ LOG_STACK=${LOG_STACK:-stderr,single}
 LOG_LEVEL=${LOG_LEVEL:-info}
 
 DB_CONNECTION=${DB_CONNECTION:-sqlite}
-DB_DATABASE=${DB_DATABASE:-database/database.sqlite}
+DB_DATABASE=${DB_DATABASE:-/var/lib/srhr/database.sqlite}
 
 SESSION_DRIVER=${SESSION_DRIVER:-file}
 CACHE_STORE=${CACHE_STORE:-file}
